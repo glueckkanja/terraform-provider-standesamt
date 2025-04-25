@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	//standesamtLibDirBase = ".standesamt"
 	standesamtLibRef  = "main"
 	standesamtLibPath = "azure/caf"
 )

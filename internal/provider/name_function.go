@@ -199,8 +199,7 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 		result.NamePrecedence, diagnose = types.ListValueFrom(ctx, types.StringType, s.DefaultNamePrecedence[:])
 		resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
 
-		var itemsNamePrecedence []attr.Value
-		itemsNamePrecedence = typeSchema.Configuration.NamePrecedence.Elements()
+		var itemsNamePrecedence = typeSchema.Configuration.NamePrecedence.Elements()
 		if len(itemsNamePrecedence) > 0 {
 			tflog.Debug(ctx, "build_resource_name: setting NamePrecedence from schema")
 			result.NamePrecedence = typeSchema.Configuration.NamePrecedence
