@@ -16,7 +16,8 @@ Build a resource name based on the provided configuration and name type.
 terraform {
   required_providers {
     standesamt = {
-      source = "glueckkanja/standesamt"
+      source  = "glueckkanja/standesamt"
+      version = "0.1.0"
     }
   }
 }

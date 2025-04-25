@@ -3,12 +3,12 @@
 page_title: "standesamt_locations Data Source - standesamt"
 subcategory: ""
 description: |-
-  location data source
+  Data source to build a map of the locations schema file.
 ---
 
 # standesamt_locations (Data Source)
 
-location data source
+Data source to build a map of the locations schema file.
 
 
 
@@ -17,4 +17,4 @@ location data source
 
 ### Read-Only
 
-- `locations` (Map of String) The location map.
+- `locations` (Map of String) You can use this map to pass to the name function and use the location in the name.
