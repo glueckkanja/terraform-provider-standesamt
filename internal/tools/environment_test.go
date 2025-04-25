@@ -31,7 +31,7 @@ func TestNamingSchemaGitUrl(t *testing.T) {
 	}{
 		{
 			name: "default",
-			want: "github.com/c4a8-azure/Standesamt-Schema-Library",
+			want: "github.com/glueckkanja/standesamt-schema-library",
 		},
 	}
 	for _, tt := range tests {

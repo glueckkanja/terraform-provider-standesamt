@@ -17,7 +17,7 @@ import (
 
 func testAccProtoV6ProviderFactoriesUnique() map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
-		"naming": providerserver.NewProtocol6WithError(New("test")()),
+		"standesamt": providerserver.NewProtocol6WithError(New("test")()),
 	}
 }
 

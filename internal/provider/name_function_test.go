@@ -17,7 +17,6 @@ func TestNameParse_Passthrough(t *testing.T) {
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
-
 		Steps: []resource.TestStep{
 			{
 				Config: testBasicPassthrough(),
@@ -27,43 +26,23 @@ func TestNameParse_Passthrough(t *testing.T) {
 						knownvalue.StringExact("test"),
 					),
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckOutput("test", "test")),
 			},
 		},
 	})
 }
 
-//func TestNameParse_RemoteSchemaBasic(t *testing.T) {
-//	resource.UnitTest(t, resource.TestCase{
-//		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-//			tfversion.SkipBelow(tfversion.Version1_8_0),
-//		},
-//		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
-//
-//		Steps: []resource.TestStep{
-//			{
-//				Config: testConfigBasicRemote(),
-//				ConfigStateChecks: []statecheck.StateCheck{
-//					statecheck.ExpectKnownOutputValue(
-//						"test",
-//						knownvalue.StringExact("rg-example"),
-//					),
-//				},
-//				Check: resource.ComposeAggregateTestCheckFunc(
-//					resource.TestCheckOutput("test", "rg-example")),
-//			},
-//		},
-//	})
-//}
-
 func testBasicPassthrough() string {
 	return `
 provider "standesamt" {
-  convention = "passthrough"
+  schema_reference = {
+    path = "azure/caf"
+    ref  = "2025.04"
+  }
 }
 
-data "standesamt_config" "default" {}
+data "standesamt_config" "default" {
+ convention = "passthrough"
+}
 
 data "standesamt_locations" "default" {}
 
@@ -78,6 +57,5 @@ locals {
 output "test" {
   value = provider::standesamt::name(local.config, "azurerm_resource_group", {}, "test")
 }
-
 `
 }
