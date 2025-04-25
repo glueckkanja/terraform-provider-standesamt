@@ -77,66 +77,71 @@ func configurationTypeAttributes() map[string]attr.Type {
 func (d *SchemaDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Schema data source",
-
+		Description:         "Data source to generate the naming schema and configuration for the Standesamt provider.",
+		MarkdownDescription: "Data source to generate the naming schema and configuration for the Standesamt provider.",
 		Attributes: map[string]schema.Attribute{
 			"convention": schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           false,
-				Description:         "Default convention for all naming results. Possible values 'default', 'passthrough'. Default 'default'",
-				MarkdownDescription: "Default convention for all naming results. Possible values 'default', 'passthrough'. Default 'default'",
+				Description:         "Define the convention for naming results. Possible values are 'default' and 'passthrough'. Will override the convention defined in the provider settings.",
+				MarkdownDescription: "Define the convention for naming results. Possible values are 'default' and 'passthrough'. Will override the convention defined in the provider settings.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "passthrough"),
 				},
 			},
 			"environment": schema.StringAttribute{
 				Optional:            true,
-				Description:         "Environment parameter.",
-				MarkdownDescription: "Environment parameter.",
+				Description:         "Define the environment for the naming schema. Normally this is the name of the environment, e.g. 'prod', 'dev', 'test'. Will override the environment defined in the provider settings.",
+				MarkdownDescription: "Define the environment for the naming schema. Normally this is the name of the environment, e.g. 'prod', 'dev', 'test'. Will override the environment defined in the provider settings.",
 			},
 			"separator": schema.StringAttribute{
 				Optional:            true,
-				Description:         "Naming schema separator. Default '-'",
-				MarkdownDescription: "Naming schema separator. Default '-'",
+				Description:         "The separator to use for generating the resulting name. Will override the separator defined in the provider settings.",
+				MarkdownDescription: "The separator to use for generating the resulting name. Will override the separator defined in the provider settings.",
 			},
 			"random_seed": schema.Int64Attribute{
 				Optional:            true,
-				Description:         "Random seed for naming schema.",
-				MarkdownDescription: "Random seed for naming schema.",
+				Description:         "A random seed used by the random number generator. This is used to generate a random name for the naming schema. The default value is 1337. Make sure to update this value to avoid collisions for globally unique names. Will override the random seed defined in the provider settings.",
+				MarkdownDescription: "A random seed used by the random number generator. This is used to generate a random name for the naming schema. The default value is 1337. Make sure to update this value to avoid collisions for globally unique names. Will override the random seed defined in the provider settings.",
 			},
 			"hash_length": schema.Int32Attribute{
 				Optional:            true,
-				Description:         "Default hash length for resource schema. Overrrides all naminng schema configurations defined in json files.",
-				MarkdownDescription: "Default hash length for resource schema. Overrrides all naminng schema configurations defined in json files.",
+				Description:         "Default hash length. Overrides all schema configurations. Overrides the default hash length defined in the provider settings.",
+				MarkdownDescription: "Default hash length. Overrides all schema configurations. Overrides the default hash length defined in the provider settings.",
 			},
 			"lowercase": schema.BoolAttribute{
 				Optional:            true,
-				Description:         "Namig result formating. Default 'false'",
-				MarkdownDescription: "Namig result formating. Default 'false'",
+				Description:         "Control if the resulting name should be lower case. Overrides all schema configurations. Overrides the default lowercase setting defined in the provider settings.",
+				MarkdownDescription: "Control if the resulting name should be lower case. Overrides all schema configurations. Overrides the default lowercase setting defined in the provider settings.",
 			},
 			"prefixes": schema.ListAttribute{
 				Optional:            true,
-				MarkdownDescription: "Prefixes for naming schema. Default '[]'",
+				Description:         "A list of strings used as prefixes for the resulting name. Each prefix will be used in order and separated by the separator. Default '[]'",
+				MarkdownDescription: "A list of strings used as prefixes for the resulting name. Each prefix will be used in order and separated by the separator. Default '[]'",
 				ElementType:         types.StringType,
 			},
 			"suffixes": schema.ListAttribute{
 				Optional:            true,
-				MarkdownDescription: "Suffixes for naming schema. Default '[]'",
+				Description:         "A list of strings used as suffixes for the resulting name. Each suffix will be used in order and separated by the separator. Default '[]'",
+				MarkdownDescription: "A list of strings used as suffixes for the resulting name. Each suffix will be used in order and separated by the separator. Default '[]'",
 				ElementType:         types.StringType,
 			},
 			"location": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Location parameter.",
+				Description:         "A location string used to lookup in the locations schema. In the default schema library this is a list of locations for Azure. If you set the location to 'westeurope' the resulting name will be 'we'.",
+				MarkdownDescription: "A location string used to lookup in the locations schema. In the default schema library this is a list of locations for Azure. If you set the location to 'westeurope' the resulting name will be 'we'.",
 			},
 			"schema": schema.MapAttribute{
-				MarkdownDescription: "Schema",
+				Description:         "A map of naming schema objects that is generated from the schema library file schema.naming.json. This attribute is used to get passed to the naming function.",
+				MarkdownDescription: "A map of naming schema objects that is generated from the schema library file schema.naming.json. This attribute is used to get passed to the naming function.",
 				Computed:            true,
 				ElementType: types.ObjectType{
 					AttrTypes: s.SchemaTypeAttributes(),
 				},
 			},
 			"configuration": schema.ObjectAttribute{
-				MarkdownDescription: "Configuration",
+				Description:         "Configuration object that contains the resulting configuration for the naming schema. This is used to pass the configuration to the naming function.",
+				MarkdownDescription: "Configuration object that contains the resulting configuration for the naming schema. This is used to pass the configuration to the naming function.",
 				Computed:            true,
 				AttributeTypes:      configurationTypeAttributes(),
 			},
