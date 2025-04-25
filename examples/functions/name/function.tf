@@ -2,6 +2,7 @@ terraform {
   required_providers {
     standesamt = {
       source = "glueckkanja/standesamt"
+      version = "0.1.0"
     }
   }
 }

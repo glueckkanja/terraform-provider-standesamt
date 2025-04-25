@@ -36,10 +36,11 @@ func (d *LocationDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 func (d *LocationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "location data source",
+		MarkdownDescription: "Data source to build a map of the locations schema file.",
 		Attributes: map[string]schema.Attribute{
 			"locations": schema.MapAttribute{
-				MarkdownDescription: "The location map.",
+				Description:         "You can use this map to pass to the name function and use the location in the name.",
+				MarkdownDescription: "You can use this map to pass to the name function and use the location in the name.",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
