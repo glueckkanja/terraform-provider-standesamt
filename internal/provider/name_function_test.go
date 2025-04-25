@@ -59,14 +59,6 @@ func TestNameParse_Passthrough(t *testing.T) {
 
 func testBasicPassthrough() string {
 	return `
-terraform {
-  required_providers {
-    standesamt = {
-      source = "glueckkanja/standesamt"
-    }
-  }
-}
-
 provider "standesamt" {
   convention = "passthrough"
 }

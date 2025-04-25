@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	standesamtLibRef  = "main"
+	standesamtLibRef  = "2025.04"
 	standesamtLibPath = "azure/caf"
 )
 

@@ -8,7 +8,7 @@ import "os"
 const (
 	standesamtSchemaDefaultCacheDir    = ".standesamt"
 	standesamtSchemaDefaultCacheDirEnv = "SA_NAMING_DIR"
-	standesamtSchemaGitUrl             = "github.com/c4a8-azure/Standesamt-Schema-Library"
+	standesamtSchemaGitUrl             = "github.com/glueckkanja/standesamt-schema-library"
 	standesamtSchemaGitUrlEnv          = "SA_NAMING_GIT_URL"
 )
 
