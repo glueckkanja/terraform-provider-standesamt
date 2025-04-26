@@ -58,27 +58,27 @@ func TestNameFunction_AzureCaf(t *testing.T) {
 	})
 }
 
-func testBasicPassthrough() string {
-	return `
-data "standesamt_config" "default" {
- convention = "passthrough"
-}
-
-data "standesamt_locations" "default" {}
-
-locals {
-  config = {
-    configuration = data.standesamt_config.default.configuration
-    schema        = data.standesamt_config.default.schema
-    locations     = data.standesamt_locations.default.locations
-  }
-}
-
-output "test" {
-  value = provider::standesamt::name(local.config, "azurerm_resource_group", {}, "test")
-}
-`
-}
+//func testBasicPassthrough() string {
+//	return `
+//data "standesamt_config" "default" {
+// convention = "passthrough"
+//}
+//
+//data "standesamt_locations" "default" {}
+//
+//locals {
+//  config = {
+//    configuration = data.standesamt_config.default.configuration
+//    schema        = data.standesamt_config.default.schema
+//    locations     = data.standesamt_locations.default.locations
+//  }
+//}
+//
+//output "test" {
+//  value = provider::standesamt::name(local.config, "azurerm_resource_group", {}, "test")
+//}
+//`
+//}
 
 const schema_config = `
 data "standesamt_config" "example" {}
