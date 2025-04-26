@@ -173,16 +173,17 @@ func (p *StandesamtProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 }
 
 // Configure prepares an API client for data sources and resources.
-func (p *StandesamtProvider) Configure(ctx context.Context, req provider.ConfigureRequest, response *provider.ConfigureResponse) {
+func (p *StandesamtProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var model providerData
-	tflog.Debug(ctx, "Provider configuration started")
+	tflog.Debug(ctx, "Provider configuration started.")
 
 	if p.config != nil {
-		tflog.Debug(ctx, "provider naming already present, skipping configuration")
+		tflog.Debug(ctx, "Provider configuration is already present, skipping configuration part.")
+		resp.DataSourceData = p.config
 		return
 	}
 
-	if response.Diagnostics.Append(req.Config.Get(ctx, &model)...); response.Diagnostics.HasError() {
+	if resp.Diagnostics.Append(req.Config.Get(ctx, &model)...); resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -212,7 +213,7 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 		if v := os.Getenv("SA_RANDOM_SEED"); v != "" {
 			i, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				response.Diagnostics.AddError("random_seed", "Invalid random seed value")
+				resp.Diagnostics.AddError("random_seed", "Invalid random seed value")
 				return
 			}
 			model.RandomSeed = types.Int64Value(i)
@@ -225,7 +226,7 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 		if v := os.Getenv("SA_HASH_LENGTH"); v != "" {
 			i, err := strconv.Atoi(v)
 			if err != nil {
-				response.Diagnostics.AddError("hash_length", "Invalid hash length value")
+				resp.Diagnostics.AddError("hash_length", "Invalid hash length value")
 				return
 			}
 			model.HashLength = types.Int32Value(int32(i))
@@ -255,15 +256,15 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 	}
 
 	sourceRef, diags := model.getSourceRef(ctx)
-	response.Diagnostics = append(response.Diagnostics, diags...)
-	if response.Diagnostics.HasError() {
+	resp.Diagnostics = append(resp.Diagnostics, diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Download the schema reference
 	f, err := sourceRef.Download(ctx, hash(sourceRef))
 	if err != nil {
-		response.Diagnostics.AddError("source_reference", err.Error())
+		resp.Diagnostics.AddError("source_reference", err.Error())
 		return
 	}
 
@@ -272,7 +273,7 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 		ProviderData: model,
 	}
 
-	response.DataSourceData = p.config
+	resp.DataSourceData = p.config
 }
 
 func hash(s fmt.Stringer) string {
