@@ -37,12 +37,12 @@ func testAccProtoV6ProviderFactoriesUnique() map[string]func() (tfprotov6.Provid
 //	"echo":   echoprovider.NewProviderServer(),
 //}
 
-//func testAccPreCheck(t *testing.T) {
-//	// You can add code here to run prior to any test case execution, for example assertions
-//	// about the appropriate environment variables being set are common to see in a pre-check
-//	// function.
-//
-//}
+func testAccPreCheck(t *testing.T) {
+	// You can add code here to run prior to any test case execution, for example assertions
+	// about the appropriate environment variables being set are common to see in a pre-check
+	// function.
+
+}
 
 func TestProviderDefaults(t *testing.T) {
 	// This test checks that the default values are set correctly in the provider.

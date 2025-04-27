@@ -70,7 +70,7 @@ func configurationTypeAttributes() map[string]attr.Type {
 		"lowercase":   types.BoolType,
 		"prefixes":    types.ListType{ElemType: types.StringType},
 		"suffixes":    types.ListType{ElemType: types.StringType},
-		"location":    types.StringType,
+		"location":    types.StringType, //TODO
 	}
 }
 
@@ -224,6 +224,11 @@ func (d *SchemaDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	configuration.Lowercase = data.Lowercase
 	if configuration.Lowercase.IsNull() {
 		configuration.Lowercase = d.providerSettings.Lowercase
+	}
+
+	configuration.Environment = data.Environment
+	if configuration.Environment.IsNull() {
+		configuration.Environment = d.providerSettings.Environment
 	}
 
 	configuration.Location = data.Location
