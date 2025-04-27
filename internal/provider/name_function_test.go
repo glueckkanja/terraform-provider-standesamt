@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) glueckkanja AG
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -26,6 +26,48 @@ func TestNameFunction_Null(t *testing.T) {
 	})
 }
 
+func TestNameFunction_MaxLength(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "12345678901234567890")
+				}`),
+				ExpectError: regexp.MustCompile(`Name has 26 characters, but maximum is set to 20\.`),
+			},
+		},
+	})
+}
+
+func TestNameFunction_MinLength(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "t")
+				}`),
+				ExpectError: regexp.MustCompile(`Name has 7 characters, but minimum is set to 8\.`),
+			},
+		},
+	})
+}
+
+func TestNameFunction_RegEx(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test#")
+				}`),
+				ExpectError: regexp.MustCompile(`Name does not match regex\.`),
+			},
+		},
+	})
+}
+
 func TestNameFunction_ResourceGroup(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -47,7 +89,7 @@ func TestNameFunction_AzureCaf(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf("%s %s", schema_config_with_no_settings, `output "test" {
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_no_settings, `output "test" {
 					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
 				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -58,27 +100,21 @@ func TestNameFunction_AzureCaf(t *testing.T) {
 	})
 }
 
-//func testBasicPassthrough() string {
-//	return `
-//data "standesamt_config" "default" {
-// convention = "passthrough"
-//}
-//
-//data "standesamt_locations" "default" {}
-//
-//locals {
-//  config = {
-//    configuration = data.standesamt_config.default.configuration
-//    schema        = data.standesamt_config.default.schema
-//    locations     = data.standesamt_locations.default.locations
-//  }
-//}
-//
-//output "test" {
-//  value = provider::standesamt::name(local.config, "azurerm_resource_group", {}, "test")
-//}
-//`
-//}
+func TestNameFunction_AzureCaf_Full(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_full_settings, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg_pre1_pre2_test_we_tst_qffc_suf1_suf2")),
+				},
+			},
+		},
+	})
+}
 
 const schema_config = `
 data "standesamt_config" "example" {}
@@ -97,7 +133,19 @@ locals {
 }
 `
 
-var schema_config_with_no_settings = fmt.Sprintf(schema_config, ``)
+var remote_schema_config_with_no_settings = fmt.Sprintf(schema_config, ``)
+
+var remote_schema_config_with_full_settings = fmt.Sprintf(schema_config, `
+convention = "default"
+environment = "tst"
+prefixes = ["pre1", "pre2"]
+suffixes = ["suf1", "suf2"]
+name_precedence = ["abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"]
+hash_length = 4
+random_seed = 1234
+separator = "_"
+location = "westeurope"
+`)
 
 const default_config = `
 locals {
@@ -121,8 +169,8 @@ locals {
 			azurerm_resource_group = {
 				resource_type 		= "azurerm_resource_group"
 				abbreviation 		= "rg"
-				min_length 			=  1
-				max_length			=  90
+				min_length 			=  8
+				max_length			=  20
 				validation_regex 	= "^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"
 				configuration = {
 				  use_environment		= true

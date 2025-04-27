@@ -172,6 +172,76 @@ func (p *StandesamtProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 	}
 }
 
+func (m *providerData) configProviderFromEnvironment() diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if val := os.Getenv("SA_ENVIRONMENT"); val != "" && m.Environment.IsNull() {
+		m.Environment = types.StringValue(val)
+	}
+
+	if val := os.Getenv("SA_CONVENTION"); val != "" && m.Convention.IsNull() {
+		if val != "default" && val != "passthrough" {
+			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_CONVENTION: %s", val))
+			return diags
+		}
+		m.Convention = types.StringValue(val)
+	}
+
+	if val := os.Getenv("SA_SEPARATOR"); val != "" && m.Separator.IsNull() {
+		m.Separator = types.StringValue(val)
+	}
+
+	if val := os.Getenv("SA_RANDOM_SEED"); val != "" && m.RandomSeed.IsNull() {
+		i, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_RANDOM_SEED: %s", err))
+			return diags
+		}
+		m.RandomSeed = types.Int64Value(i)
+	}
+
+	if val := os.Getenv("SA_HASH_LENGTH"); val != "" && m.HashLength.IsNull() {
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_HASH_LENGTH: %s", err))
+			return diags
+		}
+		m.HashLength = types.Int32Value(int32(i))
+	}
+
+	if val := os.Getenv("SA_LOWERCASE"); val != "" && m.Lowercase.IsNull() {
+		m.Lowercase = types.BoolValue(val == "true")
+	}
+
+	return nil
+}
+
+func (m *providerData) configProviderDefaults() {
+	if m.Convention.IsNull() {
+		m.Convention = types.StringValue("default")
+	}
+
+	if m.Environment.IsNull() {
+		m.Environment = types.StringValue("")
+	}
+
+	if m.Separator.IsNull() {
+		m.Separator = types.StringValue("-")
+	}
+
+	if m.RandomSeed.IsNull() {
+		m.RandomSeed = types.Int64Value(1337)
+	}
+
+	if m.HashLength.IsNull() {
+		m.HashLength = types.Int32Value(0)
+	}
+
+	if m.Lowercase.IsNull() {
+		m.Lowercase = types.BoolValue(false)
+	}
+}
+
 // Configure prepares an API client for data sources and resources.
 func (p *StandesamtProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var model providerData
@@ -187,59 +257,11 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	if model.Environment.IsNull() {
-		if v := os.Getenv("SA_ENVIRONMENT"); v != "" {
-			model.Environment = types.StringValue(v)
-		}
+	if resp.Diagnostics.Append(model.configProviderFromEnvironment()...); resp.Diagnostics.HasError() {
+		return
 	}
 
-	if model.Convention.IsNull() {
-		if v := os.Getenv("SA_CONVENTION"); v != "" {
-			model.Convention = types.StringValue(v)
-		} else {
-			model.Convention = types.StringValue("default")
-		}
-	}
-
-	if model.Separator.IsNull() {
-		if v := os.Getenv("SA_SEPARATOR"); v != "" {
-			model.Separator = types.StringValue(v)
-		} else {
-			model.Separator = types.StringValue("-")
-		}
-	}
-
-	if model.RandomSeed.IsNull() {
-		if v := os.Getenv("SA_RANDOM_SEED"); v != "" {
-			i, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				resp.Diagnostics.AddError("random_seed", "Invalid random seed value")
-				return
-			}
-			model.RandomSeed = types.Int64Value(i)
-		} else {
-			model.RandomSeed = types.Int64Value(1337)
-		}
-	}
-
-	if model.HashLength.IsNull() {
-		if v := os.Getenv("SA_HASH_LENGTH"); v != "" {
-			i, err := strconv.Atoi(v)
-			if err != nil {
-				resp.Diagnostics.AddError("hash_length", "Invalid hash length value")
-				return
-			}
-			model.HashLength = types.Int32Value(int32(i))
-		}
-	}
-
-	if model.Lowercase.IsNull() {
-		if v := os.Getenv("SA_LOWERCASE"); v != "" {
-			model.Lowercase = types.BoolValue(v == "true")
-		} else {
-			model.Lowercase = types.BoolValue(false)
-		}
-	}
+	model.configProviderDefaults()
 
 	if model.SchemaReference.IsNull() {
 		model.SchemaReference, _ = types.ObjectValue(
