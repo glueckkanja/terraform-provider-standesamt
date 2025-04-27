@@ -76,11 +76,11 @@ func (p *StandesamtProvider) Metadata(_ context.Context, _ provider.MetadataRequ
 	resp.Version = p.version
 }
 
-func (m providerData) getSourceRef(ctx context.Context) (s.Source, diag.Diagnostics) {
+func (d providerData) getSourceRef(ctx context.Context) (s.Source, diag.Diagnostics) {
 
 	var sourceValue s.SourceValue
 
-	diags := m.SchemaReference.As(ctx, &sourceValue, basetypes.ObjectAsOptions{
+	diags := d.SchemaReference.As(ctx, &sourceValue, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
 	})
@@ -172,99 +172,77 @@ func (p *StandesamtProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 	}
 }
 
-func (m *providerData) configProviderFromEnvironment() diag.Diagnostics {
+func (d *providerData) configProviderFromEnvironment() diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	if val := os.Getenv("SA_ENVIRONMENT"); val != "" && m.Environment.IsNull() {
-		m.Environment = types.StringValue(val)
+	if val := os.Getenv("SA_ENVIRONMENT"); val != "" && d.Environment.IsNull() {
+		d.Environment = types.StringValue(val)
 	}
 
-	if val := os.Getenv("SA_CONVENTION"); val != "" && m.Convention.IsNull() {
+	if val := os.Getenv("SA_CONVENTION"); val != "" && d.Convention.IsNull() {
 		if val != "default" && val != "passthrough" {
 			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_CONVENTION: %s", val))
 			return diags
 		}
-		m.Convention = types.StringValue(val)
+		d.Convention = types.StringValue(val)
 	}
 
-	if val := os.Getenv("SA_SEPARATOR"); val != "" && m.Separator.IsNull() {
-		m.Separator = types.StringValue(val)
+	if val := os.Getenv("SA_SEPARATOR"); val != "" && d.Separator.IsNull() {
+		d.Separator = types.StringValue(val)
 	}
 
-	if val := os.Getenv("SA_RANDOM_SEED"); val != "" && m.RandomSeed.IsNull() {
+	if val := os.Getenv("SA_RANDOM_SEED"); val != "" && d.RandomSeed.IsNull() {
 		i, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_RANDOM_SEED: %s", err))
 			return diags
 		}
-		m.RandomSeed = types.Int64Value(i)
+		d.RandomSeed = types.Int64Value(i)
 	}
 
-	if val := os.Getenv("SA_HASH_LENGTH"); val != "" && m.HashLength.IsNull() {
+	if val := os.Getenv("SA_HASH_LENGTH"); val != "" && d.HashLength.IsNull() {
 		i, err := strconv.Atoi(val)
 		if err != nil {
 			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_HASH_LENGTH: %s", err))
 			return diags
 		}
-		m.HashLength = types.Int32Value(int32(i))
+		d.HashLength = types.Int32Value(int32(i))
 	}
 
-	if val := os.Getenv("SA_LOWERCASE"); val != "" && m.Lowercase.IsNull() {
-		m.Lowercase = types.BoolValue(val == "true")
+	if val := os.Getenv("SA_LOWERCASE"); val != "" && d.Lowercase.IsNull() {
+		d.Lowercase = types.BoolValue(val == "true")
 	}
 
 	return nil
 }
 
-func (m *providerData) configProviderDefaults() {
-	if m.Convention.IsNull() {
-		m.Convention = types.StringValue("default")
+func (d *providerData) configProviderDefaults() {
+	if d.Convention.IsNull() {
+		d.Convention = types.StringValue("default")
 	}
 
-	if m.Environment.IsNull() {
-		m.Environment = types.StringValue("")
+	if d.Environment.IsNull() {
+		d.Environment = types.StringValue("")
 	}
 
-	if m.Separator.IsNull() {
-		m.Separator = types.StringValue("-")
+	if d.Separator.IsNull() {
+		d.Separator = types.StringValue("-")
 	}
 
-	if m.RandomSeed.IsNull() {
-		m.RandomSeed = types.Int64Value(1337)
+	if d.RandomSeed.IsNull() {
+		d.RandomSeed = types.Int64Value(1337)
 	}
 
-	if m.HashLength.IsNull() {
-		m.HashLength = types.Int32Value(0)
+	if d.HashLength.IsNull() {
+		d.HashLength = types.Int32Value(0)
 	}
 
-	if m.Lowercase.IsNull() {
-		m.Lowercase = types.BoolValue(false)
-	}
-}
-
-// Configure prepares an API client for data sources and resources.
-func (p *StandesamtProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var model providerData
-	tflog.Debug(ctx, "Provider configuration started.")
-
-	if p.config != nil {
-		tflog.Debug(ctx, "Provider configuration is already present, skipping configuration part.")
-		resp.DataSourceData = p.config
-		return
+	if d.Lowercase.IsNull() {
+		d.Lowercase = types.BoolValue(false)
 	}
 
-	if resp.Diagnostics.Append(req.Config.Get(ctx, &model)...); resp.Diagnostics.HasError() {
-		return
-	}
-
-	if resp.Diagnostics.Append(model.configProviderFromEnvironment()...); resp.Diagnostics.HasError() {
-		return
-	}
-
-	model.configProviderDefaults()
-
-	if model.SchemaReference.IsNull() {
-		model.SchemaReference, _ = types.ObjectValue(
+	if d.SchemaReference.IsNull() {
+		d.SchemaReference, _ = types.ObjectValue(
 			map[string]attr.Type{
 				"ref":        types.StringType,
 				"path":       types.StringType,
@@ -276,8 +254,30 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 				"custom_url": types.StringNull(),
 			})
 	}
+}
 
-	sourceRef, diags := model.getSourceRef(ctx)
+// Configure prepares an API client for data sources and resources.
+func (p *StandesamtProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data providerData
+	tflog.Debug(ctx, "Provider configuration started.")
+
+	if p.config != nil {
+		tflog.Debug(ctx, "Provider configuration is already present, skipping configuration part.")
+		resp.DataSourceData = p.config
+		return
+	}
+
+	if resp.Diagnostics.Append(req.Config.Get(ctx, &data)...); resp.Diagnostics.HasError() {
+		return
+	}
+
+	if resp.Diagnostics.Append(data.configProviderFromEnvironment()...); resp.Diagnostics.HasError() {
+		return
+	}
+
+	data.configProviderDefaults()
+
+	sourceRef, diags := data.getSourceRef(ctx)
 	resp.Diagnostics = append(resp.Diagnostics, diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -292,7 +292,7 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 
 	p.config = &ProviderConfig{
 		SourceRef:    f,
-		ProviderData: model,
+		ProviderData: data,
 	}
 
 	resp.DataSourceData = p.config

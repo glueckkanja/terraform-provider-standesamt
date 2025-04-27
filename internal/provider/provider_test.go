@@ -4,11 +4,14 @@
 package provider
 
 import (
+	"context"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/assert"
 	"os"
+	s "terraform-provider-standesamt/internal/schema"
 	"testing"
 )
 
@@ -40,6 +43,37 @@ func testAccProtoV6ProviderFactoriesUnique() map[string]func() (tfprotov6.Provid
 //	// function.
 //
 //}
+
+func TestProviderDefaults(t *testing.T) {
+	// This test checks that the default values are set correctly in the provider.
+	// It does not check that the values are actually used in the provider logic.
+	// The actual logic is tested in the other tests.
+	_ = os.Unsetenv("SA_ENVIRONMENT")
+	_ = os.Unsetenv("SA_CONVENTION")
+	_ = os.Unsetenv("SA_SEPARATOR")
+	_ = os.Unsetenv("SA_RANDOM_SEED")
+	_ = os.Unsetenv("SA_HASH_LENGTH")
+	_ = os.Unsetenv("SA_LOWERCASE")
+
+	data := &providerData{}
+	data.configProviderDefaults()
+
+	var sourceRef s.SourceValue
+
+	diags := data.SchemaReference.As(context.Background(), &sourceRef, basetypes.ObjectAsOptions{})
+	assert.False(t, diags.HasError())
+
+	assert.Equal(t, "default", data.Convention.ValueString())
+	assert.Equal(t, "", data.Environment.ValueString())
+	assert.Equal(t, "-", data.Separator.ValueString())
+	assert.Equal(t, int64(1337), data.RandomSeed.ValueInt64())
+	assert.Equal(t, int32(0), data.HashLength.ValueInt32())
+	assert.Equal(t, false, data.Lowercase.ValueBool())
+	assert.Equal(t, "2025.04", sourceRef.Ref.ValueString())
+	assert.Equal(t, "azure/caf", sourceRef.Path.ValueString())
+	assert.Equal(t, "", sourceRef.CustomUrl.ValueString())
+
+}
 
 func TestConfigureFromEnvironment(t *testing.T) {
 	var diags diag.Diagnostics
