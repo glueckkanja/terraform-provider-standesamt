@@ -29,4 +29,3 @@ locals {
 output "name" {
   value = provider::standesamt::name(local.config, "azurerm_resource_group", {}, "example")
 }
-
