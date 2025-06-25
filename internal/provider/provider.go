@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io/fs"
+	"math"
 	"os"
 	"strconv"
 	s "terraform-provider-standesamt/internal/schema"
@@ -206,7 +207,12 @@ func (d *providerData) configProviderFromEnvironment() diag.Diagnostics {
 			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_HASH_LENGTH: %s", err))
 			return diags
 		}
-		d.HashLength = types.Int32Value(int32(i))
+		if i > 0 && i <= math.MaxInt32 {
+			d.HashLength = types.Int32Value(int32(i))
+		} else {
+			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_HASH_LENGTH: %s, must be between 1 and %d", val, math.MaxInt32))
+			return diags
+		}
 	}
 
 	if val := os.Getenv("SA_LOWERCASE"); val != "" && d.Lowercase.IsNull() {
