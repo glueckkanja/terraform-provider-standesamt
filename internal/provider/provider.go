@@ -210,7 +210,7 @@ func (d *providerData) configProviderFromEnvironment() diag.Diagnostics {
 		if i > 0 && i <= math.MaxInt32 {
 			d.HashLength = types.Int32Value(int32(i))
 		} else {
-			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_HASH_LENGTH: %s, must be between 1 and %d", val, math.MaxInt32))
+			diags.AddError("Invalid Environment Variable", fmt.Sprintf("Invalid value for SA_HASH_LENGTH: %s (parsed as %d), must be between 1 and %d", val, i, math.MaxInt32))
 			return diags
 		}
 	}
