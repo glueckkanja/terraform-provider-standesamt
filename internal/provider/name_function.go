@@ -290,7 +290,7 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 
 	// Check the final name against the naming schema constraints
 	if typeSchema.Configuration.DenyDoubleHyphens.ValueBool() {
-		resp.Error = function.ConcatFuncErrors(resp.Error, validateDoubleHyphens(result.Name.ValueString(), resp))
+		resp.Error = function.ConcatFuncErrors(resp.Error, validateDoubleHyphens(resultNameStr, resp))
 	}
 
 	resp.Error = function.ConcatFuncErrors(resp.Error, validateResult(resultNameStr, typeSchema, resp))
