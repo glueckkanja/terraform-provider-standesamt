@@ -54,6 +54,22 @@ func TestNameFunction_DoubleHyphenError(t *testing.T) {
 	})
 }
 
+func TestNameFunction_DoubleHyphenNoError(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_no_settings, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "te--st")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg-te--st")),
+				},
+			},
+		},
+	})
+}
+
 func TestNameFunction_MinLength(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
