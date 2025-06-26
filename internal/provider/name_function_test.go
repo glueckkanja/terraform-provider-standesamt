@@ -40,6 +40,36 @@ func TestNameFunction_MaxLength(t *testing.T) {
 	})
 }
 
+func TestNameFunction_DoubleHyphenError(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "12345--67890")
+				}`),
+				ExpectError: regexp.MustCompile(`Invalid name: 'rg-12345--67890-we' contains double hyphens`),
+			},
+		},
+	})
+}
+
+func TestNameFunction_DoubleHyphenNoError(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_no_settings, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "te--st")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg-te--st")),
+				},
+			},
+		},
+	})
+}
+
 func TestNameFunction_MinLength(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -193,7 +223,7 @@ locals {
 				  use_environment		= true
 				  use_lower_case 		= false
 				  use_separator 		= true
-				  deny_double_hyphens = false
+				  deny_double_hyphens = true
 				  name_precedence		= []
 				  hash_length			= 0
 				}				
