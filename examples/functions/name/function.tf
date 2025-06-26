@@ -10,7 +10,7 @@ terraform {
 provider "standesamt" {
   schema_reference = {
     path = "azure/caf"
-    ref  = "main"
+    ref  = "2025.04"
   }
 }
 

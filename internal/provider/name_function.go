@@ -41,6 +41,7 @@ type buildNameResultModel struct {
 	Suffixes       types.List
 	NamePrecedence types.List
 	Location       types.String
+	Lowercase      types.Bool
 }
 
 func (r *buildNameResultModel) GetName() types.String {
@@ -154,12 +155,6 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 		}
 	}
 
-	//if buildNameSettings.Convention != "" {
-	//	result.Convention = types.StringValue(buildNameSettings.Convention)
-	//} else {
-	//	result.Convention = model.Configuration.Convention
-	//}
-
 	result.SetConvention(&buildNameSettings, &model)
 
 	if result.Convention.ValueString() == "default" {
@@ -238,7 +233,7 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 			result.RandomSeed = model.Configuration.RandomSeed
 		}
 
-		calculatedContent := []string{}
+		var calculatedContent []string
 
 		for i := 0; i < len(result.NamePrecedence.Elements()); i++ {
 
@@ -285,15 +280,14 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 		result.Name = name
 	}
 
+	// Check if any of the use_lower_case settings are set to true
+	// and convert the full name to lower case before validation
+	if typeSchema.Configuration.UseLowerCase.ValueBool() || model.Configuration.Lowercase.ValueBool() || buildNameSettings.Lowercase {
+		result.Name = toLower(result.Name)
+	}
+
 	// Check the final name against the naming schema constraints
 	resultNameStr := tools.GetBaseString(result.Name)
-
-	//if ok, funcErr := typeSchema.ValidateResult(resultNameStr); !ok {
-	//	resp.Error = function.ConcatFuncErrors(resp.Error, funcErr)
-	//	return
-	//}
-
-	//TODO Implement to lower
 
 	//TODO Implement deny double hyphens
 
@@ -314,4 +308,12 @@ func validateResult(result string, schema s.NamingSchema, resp *function.RunResp
 	}
 
 	return resp.Error
+}
+
+func toLower(s types.String) types.String {
+	if s.IsNull() || s.IsUnknown() {
+		return s
+	}
+
+	return types.StringValue(strings.ToLower(s.ValueString()))
 }
