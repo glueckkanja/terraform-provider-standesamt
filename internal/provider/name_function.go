@@ -286,10 +286,12 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 		result.Name = toLower(result.Name)
 	}
 
-	// Check the final name against the naming schema constraints
 	resultNameStr := tools.GetBaseString(result.Name)
 
-	//TODO Implement deny double hyphens
+	// Check the final name against the naming schema constraints
+	if typeSchema.Configuration.DenyDoubleHyphens.ValueBool() {
+		resp.Error = function.ConcatFuncErrors(resp.Error, validateDoubleHyphens(result.Name.ValueString(), resp))
+	}
 
 	resp.Error = function.ConcatFuncErrors(resp.Error, validateResult(resultNameStr, typeSchema, resp))
 
@@ -305,6 +307,15 @@ func validateResult(result string, schema s.NamingSchema, resp *function.RunResp
 		resp.Error = function.ConcatFuncErrors(resp.Error, function.NewFuncError(fmt.Sprintf("Name has %d characters, but maximum is set to %d", len(result), schema.MaxLength.ValueInt64())))
 	} else if int64(len(result)) < schema.MinLength.ValueInt64() {
 		resp.Error = function.ConcatFuncErrors(resp.Error, function.NewFuncError(fmt.Sprintf("Name has %d characters, but minimum is set to %d", len(result), schema.MinLength.ValueInt64())))
+	}
+
+	return resp.Error
+}
+
+func validateDoubleHyphens(result string, resp *function.RunResponse) *function.FuncError {
+	// Check for double hyphens
+	if strings.Contains(result, "--") {
+		resp.Error = function.ConcatFuncErrors(resp.Error, function.NewFuncError(fmt.Sprintf("Invalid name: '%s' contains double hyphens", result)))
 	}
 
 	return resp.Error
