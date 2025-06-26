@@ -47,6 +47,7 @@ type BuildNameSettingsModel struct {
 	RandomSeed     int64    `json:"random_seed,omitempty"`
 	Separator      string   `json:"separator,omitempty"`
 	Location       string   `json:"location,omitempty"`
+	Lowercase      bool     `json:"lowercase,omitempty"`
 }
 
 type NamingSchemaMap map[string]NamingSchema

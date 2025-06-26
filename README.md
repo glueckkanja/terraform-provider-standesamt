@@ -43,7 +43,7 @@ Further [usage documentation is available on the Terraform website](https://regi
 ## Developer Requirements
 
 * [OpenTofu](https://opentofu.org/docs/intro/install/) version 1.8+
-* [Go](https://golang.org/doc/install) version 1.18.x (to build the provider plugin)
+* [Go](https://golang.org/doc/install) version 1.23.x (to build the provider plugin)
 
 ### On Windows
 

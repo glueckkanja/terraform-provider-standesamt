@@ -84,6 +84,22 @@ func TestNameFunction_ResourceGroup(t *testing.T) {
 	})
 }
 
+func TestNameFunction_LowerCase(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "UPPERCASE")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg-test-we")),
+				},
+			},
+		},
+	})
+}
+
 func TestNameFunction_AzureCaf(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -106,7 +122,7 @@ func TestNameFunction_AzureCaf_Full(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf("%s %s", remote_schema_config_with_full_settings, `output "test" {
-					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "TEST")
 				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg_pre1_pre2_test_we_tst_qffc_suf1_suf2")),
@@ -145,6 +161,7 @@ hash_length = 4
 random_seed = 1234
 separator = "_"
 location = "westeurope"
+lowercase = true
 `)
 
 const default_config = `
@@ -163,7 +180,7 @@ locals {
 			random_seed 		= 1337
 			separator 			= "-"
 			location 			= "westeurope"
-			lowercase 			=  true
+			lowercase 			= true
 		}
 		schema = {
 			azurerm_resource_group = {
