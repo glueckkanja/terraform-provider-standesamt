@@ -93,7 +93,7 @@ func TestNameFunction_LowerCase(t *testing.T) {
 					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "UPPERCASE")
 				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg-test-we")),
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg-uppercase-we")),
 				},
 			},
 		},

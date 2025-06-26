@@ -233,7 +233,7 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 			result.RandomSeed = model.Configuration.RandomSeed
 		}
 
-		calculatedContent := []string{}
+		var calculatedContent []string
 
 		for i := 0; i < len(result.NamePrecedence.Elements()); i++ {
 
