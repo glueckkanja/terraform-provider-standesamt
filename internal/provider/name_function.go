@@ -7,17 +7,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
+	"terraform-provider-standesamt/internal/random"
+	s "terraform-provider-standesamt/internal/schema"
+	"terraform-provider-standesamt/internal/tools"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"regexp"
-	"strings"
-	"terraform-provider-standesamt/internal/random"
-	s "terraform-provider-standesamt/internal/schema"
-	"terraform-provider-standesamt/internal/tools"
 )
 
 //var namingReturnAttrTypes = map[string]attr.Type{
@@ -131,6 +132,7 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 
 	for k, o := range model.Schema {
 		if k == nameType {
+			tflog.Debug(ctx, fmt.Sprintf("Found schema for name_type %s", nameType))
 			diagnose = o.As(ctx, &typeSchema, basetypes.ObjectAsOptions{})
 
 			resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
@@ -138,12 +140,15 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 		}
 	}
 
+	tflog.Debug(ctx, fmt.Sprintf("Using schema: %+v", typeSchema))
+
 	if !settingsDynamic.IsNull() && !settingsDynamic.IsUnderlyingValueNull() {
 		switch settingsDynamic.UnderlyingValue().(type) {
 		case types.Object:
 			// This may be the sickest workaround ever to get optional attributes to work
 			// The String() function will return a json representation of the object
 			// And we can unmarshal it into our struct leveraging the json omitempty
+			tflog.Debug(ctx, fmt.Sprintf("Settings object as string: %s", settingsDynamic.UnderlyingValue().String()))
 			err := json.Unmarshal([]byte(settingsDynamic.UnderlyingValue().String()), &buildNameSettings)
 			if err != nil {
 				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
