@@ -330,5 +330,6 @@ func (p *StandesamtProvider) Resources(_ context.Context) []func() resource.Reso
 func (p *StandesamtProvider) Functions(_ context.Context) []func() function.Function {
 	return []func() function.Function{
 		NewNameFunction,
+		NewValidateFunction,
 	}
 }
