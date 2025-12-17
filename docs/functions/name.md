@@ -60,4 +60,3 @@ name(configurations object, name_type string, settings dynamic, name string) str
 1. `name_type` (String) The resource type to use for the name.
 1. `settings` (Dynamic) A map of settings to apply to the name string.
 1. `name` (String) Name to parse
-
