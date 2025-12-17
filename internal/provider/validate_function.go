@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) glueckkanja AG
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -125,9 +125,10 @@ func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, res
 	if !settingsDynamic.IsNull() && !settingsDynamic.IsUnderlyingValueNull() {
 		switch settingsDynamic.UnderlyingValue().(type) {
 		case types.Object:
-			// This may be the sickest workaround ever to get optional attributes to work
-			// The String() function will return a json representation of the object
-			// And we can unmarshal it into our struct leveraging the json omitempty
+			// Parse optional settings from dynamic parameter
+			// The String() function returns a JSON representation of the object,
+			// which we can unmarshal into our struct leveraging json.omitempty tags
+			// to handle optional attributes that may not be present
 			err := json.Unmarshal([]byte(settingsDynamic.UnderlyingValue().String()), &buildNameSettings)
 			if err != nil {
 				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
@@ -259,7 +260,7 @@ func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, res
 			}
 		}
 		result.Name = types.StringValue(strings.Join(calculatedContent, result.Separator.ValueString()))
-	} else { // end if result.Configuration.Convention.String() == "default"
+	} else { // end if result.Convention.ValueString() == "default"
 		tflog.Debug(ctx, "configuring with passthrough convention")
 		result.Name = name
 	}
