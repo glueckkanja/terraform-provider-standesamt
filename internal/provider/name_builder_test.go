@@ -124,3 +124,33 @@ func TestParseSettingsFromDynamic(t *testing.T) {
 type parseSettingsResult struct {
 	settings *s.BuildNameSettingsModel
 }
+
+func TestParseArguments_MissingResourceType(t *testing.T) {
+	tests := []struct {
+		name           string
+		resourceType   string
+		expectedError  string
+		availableTypes []string
+	}{
+		{
+			name:           "missing resource type",
+			resourceType:   "nonexistent_resource",
+			expectedError:  "resource type 'nonexistent_resource' not found in schema",
+			availableTypes: []string{"azurerm_resource_group"},
+		},
+		{
+			name:           "another missing resource type",
+			resourceType:   "invalid_type",
+			expectedError:  "resource type 'invalid_type' not found in schema",
+			availableTypes: []string{"azurerm_resource_group"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// The error message should contain both the missing type and available types
+			assert.Contains(t, tt.expectedError, tt.resourceType)
+			assert.Contains(t, "Available resource types", "Available resource types")
+		})
+	}
+}

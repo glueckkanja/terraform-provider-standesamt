@@ -27,6 +27,20 @@ func TestValidateFunction_Null(t *testing.T) {
 	})
 }
 
+func TestValidateFunction_MissingResourceType(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
+					value = provider::standesamt::validate(local.config, "invalid_resource_type", local.settings, "test")
+				}`),
+				ExpectError: regexp.MustCompile(`(?s)resource type\s+'invalid_resource_type' not found in schema.*Available resource types:\s+\[azurerm_resource_group\]`),
+			},
+		},
+	})
+}
+
 func TestValidateFunction_ValidName(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),

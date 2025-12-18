@@ -168,7 +168,14 @@ func parseArguments(
 	}
 
 	if !schemaFound {
-		resp.Error = function.NewArgumentFuncError(1, "name_type not found in schema")
+		// Collect available resource types for helpful error message
+		availableTypes := make([]string, 0, len(model.Schema))
+		for k := range model.Schema {
+			availableTypes = append(availableTypes, k)
+		}
+		
+		errorMsg := fmt.Sprintf("resource type '%s' not found in schema. Available resource types: %v", nameType, availableTypes)
+		resp.Error = function.NewArgumentFuncError(1, errorMsg)
 		return nil, "", nil, types.String{}, nil, resp.Error
 	}
 
