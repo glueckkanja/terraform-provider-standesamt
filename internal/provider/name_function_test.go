@@ -35,7 +35,7 @@ func TestNameFunction_MissingResourceType(t *testing.T) {
 				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
 					value = provider::standesamt::name(local.config, "invalid_resource_type", local.settings, "test")
 				}`),
-				ExpectError: regexp.MustCompile(`(?s)resource type\s+'invalid_resource_type' not found in schema.*Available resource types:\s+\[azurerm_resource_group\]`),
+				ExpectError: regexp.MustCompile(`(?s)resource type\s+'invalid_resource_type' not found in schema.*Available resource types:\s+azurerm_resource_group`),
 			},
 		},
 	})

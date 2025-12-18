@@ -174,7 +174,7 @@ func parseArguments(
 			availableTypes = append(availableTypes, k)
 		}
 		
-		errorMsg := fmt.Sprintf("resource type '%s' not found in schema. Available resource types: %v", nameType, availableTypes)
+		errorMsg := fmt.Sprintf("resource type '%s' not found in schema. Available resource types: %s", nameType, strings.Join(availableTypes, ", "))
 		resp.Error = function.NewArgumentFuncError(1, errorMsg)
 		return nil, "", nil, types.String{}, nil, resp.Error
 	}
