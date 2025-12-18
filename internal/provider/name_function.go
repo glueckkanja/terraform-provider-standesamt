@@ -107,7 +107,8 @@ func (f *NameFunction) Definition(_ context.Context, _ function.DefinitionReques
 func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	// Parse and validate input arguments
 	model, _, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
-	if err != nil {
+	if err != nil || resp.Error != nil {
+		// Error is already set in resp.Error by parseArguments, just return
 		return
 	}
 

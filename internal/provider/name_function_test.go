@@ -35,7 +35,38 @@ func TestNameFunction_MissingResourceType(t *testing.T) {
 				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
 					value = provider::standesamt::name(local.config, "invalid_resource_type", local.settings, "test")
 				}`),
-				ExpectError: regexp.MustCompile(`(?s)resource type\s+'invalid_resource_type' not found in schema.*Available resource types:\s+azurerm_resource_group`),
+				ExpectError: regexp.MustCompile(`(?s)resource type\s+'invalid_resource_type' not found in schema.*Available resource types\s+\(\d+\):\s+azurerm_resource_group`),
+			},
+		},
+	})
+}
+
+// Test that verifies the error when requesting a resource type that doesn't exist in the schema
+// This simulates the scenario where the schema.json doesn't contain the requested resource type
+func TestNameFunction_ResourceTypeNotInSchema(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", config_with_different_resource_type, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
+				}`),
+				ExpectError: regexp.MustCompile(`(?s)resource type\s+'azurerm_resource_group' not found in schema.*Available resource types\s+\(\d+\):\s+azurerm_storage_account`),
+			},
+		},
+	})
+}
+
+// Test that verifies the error when the schema is completely empty
+func TestNameFunction_EmptySchema(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", config_with_empty_schema, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
+				}`),
+				ExpectError: regexp.MustCompile(`(?s)resource type.*not found in schema.*schema appears to be empty`),
 			},
 		},
 	})
@@ -312,3 +343,69 @@ locals {
 `
 
 var default_config_with_no_settings_default_precedence = fmt.Sprintf(default_config, ``, `"abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"`)
+
+// Config with a different resource type (not azurerm_resource_group)
+const config_with_different_resource_type = `
+locals {
+	settings = {}
+	config = {
+		configuration = {
+			convention 		= "default"
+			environment 		= ""
+			prefixes 			= []
+			suffixes			= []
+			name_precedence 	= ["abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"]
+			hash_length 		= 0
+			random_seed 		= 1337
+			separator 			= "-"
+			location 			= "westeurope"
+			lowercase 			= true
+		}
+		schema = {
+			azurerm_storage_account = {
+				resource_type 		= "azurerm_storage_account"
+				abbreviation 		= "st"
+				min_length 			= 3
+				max_length			= 24
+				validation_regex 	= "^[a-z0-9]{3,24}$"
+				configuration = {
+				  use_environment		= false
+				  use_lower_case 		= true
+				  use_separator 		= false
+				  deny_double_hyphens = false
+				  name_precedence		= []
+				  hash_length			= 0
+				}				
+			}
+		}
+		locations = {
+			"westeurope" = "we"
+		}
+	}
+}
+`
+
+// Config with an empty schema
+const config_with_empty_schema = `
+locals {
+	settings = {}
+	config = {
+		configuration = {
+			convention 		= "default"
+			environment 		= ""
+			prefixes 			= []
+			suffixes			= []
+			name_precedence 	= ["abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"]
+			hash_length 		= 0
+			random_seed 		= 1337
+			separator 			= "-"
+			location 			= "westeurope"
+			lowercase 			= true
+		}
+		schema = {}
+		locations = {
+			"westeurope" = "we"
+		}
+	}
+}
+`
