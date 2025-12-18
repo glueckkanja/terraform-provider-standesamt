@@ -5,13 +5,14 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"terraform-provider-standesamt/internal/random"
 	s "terraform-provider-standesamt/internal/schema"
 	"terraform-provider-standesamt/internal/tools"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -26,6 +27,104 @@ type nameBuilder struct {
 	typeSchema        *s.NamingSchema
 	buildNameSettings *s.BuildNameSettingsModel
 	result            *buildNameResultModel
+}
+
+// extractStringSlice extracts a string slice from a types.List or types.Tuple
+func extractStringSlice(value attr.Value) []string {
+	var result []string
+
+	switch v := value.(type) {
+	case types.List:
+		if v.IsNull() || v.IsUnknown() {
+			return nil
+		}
+		for _, elem := range v.Elements() {
+			if str, ok := elem.(types.String); ok && !str.IsNull() && !str.IsUnknown() {
+				result = append(result, str.ValueString())
+			}
+		}
+	case types.Tuple:
+		if v.IsNull() || v.IsUnknown() {
+			return nil
+		}
+		for _, elem := range v.Elements() {
+			if str, ok := elem.(types.String); ok && !str.IsNull() && !str.IsUnknown() {
+				result = append(result, str.ValueString())
+			}
+		}
+	}
+
+	return result
+}
+
+// parseSettingsFromDynamic extracts settings from a dynamic parameter without JSON
+func parseSettingsFromDynamic(settingsDynamic types.Dynamic) (*s.BuildNameSettingsModel, error) {
+	settings := &s.BuildNameSettingsModel{}
+
+	if settingsDynamic.IsNull() || settingsDynamic.IsUnderlyingValueNull() {
+		return settings, nil
+	}
+
+	obj, ok := settingsDynamic.UnderlyingValue().(types.Object)
+	if !ok {
+		return nil, fmt.Errorf("settings must be an object")
+	}
+
+	attrs := obj.Attributes()
+
+	// Extract each attribute with null/unknown checks
+	if v, ok := attrs["convention"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.Convention = v.ValueString()
+	}
+
+	if v, ok := attrs["location"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.Location = v.ValueString()
+	}
+
+	if v, ok := attrs["environment"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.Environment = v.ValueString()
+	}
+
+	if v, ok := attrs["separator"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.Separator = v.ValueString()
+	}
+
+	// Handle hash_length - can be types.Int32, types.Int64, or types.Number
+	if v, ok := attrs["hash_length"].(types.Int32); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.HashLength = v.ValueInt32()
+	} else if v, ok := attrs["hash_length"].(types.Int64); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.HashLength = int32(v.ValueInt64())
+	} else if v, ok := attrs["hash_length"].(types.Number); ok && !v.IsNull() && !v.IsUnknown() {
+		val, _ := v.ValueBigFloat().Int64()
+		settings.HashLength = int32(val)
+	}
+
+	// Handle random_seed - can be types.Int64 or types.Number
+	if v, ok := attrs["random_seed"].(types.Int64); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.RandomSeed = v.ValueInt64()
+	} else if v, ok := attrs["random_seed"].(types.Number); ok && !v.IsNull() && !v.IsUnknown() {
+		val, _ := v.ValueBigFloat().Int64()
+		settings.RandomSeed = val
+	}
+
+	if v, ok := attrs["lowercase"].(types.Bool); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.Lowercase = v.ValueBool()
+	}
+
+	// Handle list/tuple attributes - HCL uses tuples for literal lists
+	if v, ok := attrs["prefixes"]; ok {
+		settings.Prefixes = extractStringSlice(v)
+	}
+
+	if v, ok := attrs["suffixes"]; ok {
+		settings.Suffixes = extractStringSlice(v)
+	}
+
+	if v, ok := attrs["name_precedence"]; ok {
+		settings.NamePrecedence = extractStringSlice(v)
+	}
+
+	return settings, nil
 }
 
 // parseArguments extracts and validates the function arguments
@@ -75,21 +174,12 @@ func parseArguments(
 
 	// Parse optional settings from dynamic parameter
 	if !settingsDynamic.IsNull() && !settingsDynamic.IsUnderlyingValueNull() {
-		switch settingsDynamic.UnderlyingValue().(type) {
-		case types.Object:
-			// Parse optional settings from dynamic parameter
-			// The String() function returns a JSON representation of the object,
-			// which we can unmarshal into our struct leveraging json.omitempty tags
-			// to handle optional attributes that may not be present
-			err := json.Unmarshal([]byte(settingsDynamic.UnderlyingValue().String()), &buildNameSettings)
-			if err != nil {
-				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
-				return nil, "", nil, types.String{}, nil, resp.Error
-			}
-		default:
-			resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, "settingsDynamic is not an object"))
+		parsedSettings, err := parseSettingsFromDynamic(settingsDynamic)
+		if err != nil {
+			resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
 			return nil, "", nil, types.String{}, nil, resp.Error
 		}
+		buildNameSettings = *parsedSettings
 	}
 
 	return &model, nameType, &buildNameSettings, name, &typeSchema, nil
