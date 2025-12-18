@@ -4,15 +4,15 @@
 package provider
 
 import (
-	"context"
+	"os"
+	s "terraform-provider-standesamt/internal/schema"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/assert"
-	"os"
-	s "terraform-provider-standesamt/internal/schema"
-	"testing"
 )
 
 // testAccProtoV6ProviderFactories is used to instantiate a provider during acceptance testing.
@@ -60,7 +60,7 @@ func TestProviderDefaults(t *testing.T) {
 
 	var sourceRef s.SourceValue
 
-	diags := data.SchemaReference.As(context.Background(), &sourceRef, basetypes.ObjectAsOptions{})
+	diags := data.SchemaReference.As(t.Context(), &sourceRef, basetypes.ObjectAsOptions{})
 	assert.False(t, diags.HasError())
 
 	assert.Equal(t, "default", data.Convention.ValueString())
