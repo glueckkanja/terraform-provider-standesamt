@@ -5,11 +5,12 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"regexp"
-	"testing"
 )
 
 func TestNameFunction_Null(t *testing.T) {
@@ -34,7 +35,7 @@ func TestNameFunction_MaxLength(t *testing.T) {
 				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
 					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "12345678901234567890")
 				}`),
-				ExpectError: regexp.MustCompile(`Name has 26 characters, but maximum is set to 20\.`),
+				ExpectError: regexp.MustCompile(`Name has 26 characters,\s+but maximum is set to 20\.`),
 			},
 		},
 	})
@@ -48,7 +49,7 @@ func TestNameFunction_DoubleHyphenError(t *testing.T) {
 				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
 					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "12345--67890")
 				}`),
-				ExpectError: regexp.MustCompile(`Invalid name: 'rg-12345--67890-we' contains double hyphens`),
+				ExpectError: regexp.MustCompile(`Invalid name:\s+'rg-12345--67890-we' contains double hyphens`),
 			},
 		},
 	})
@@ -78,7 +79,7 @@ func TestNameFunction_MinLength(t *testing.T) {
 				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
 					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "t")
 				}`),
-				ExpectError: regexp.MustCompile(`Name has 7 characters, but minimum is set to 8\.`),
+				ExpectError: regexp.MustCompile(`Name has 7 characters,\s+but minimum is set to 8\.`),
 			},
 		},
 	})
@@ -92,7 +93,7 @@ func TestNameFunction_RegEx(t *testing.T) {
 				Config: fmt.Sprintf("%s %s", default_config_with_no_settings_default_precedence, `output "test" {
 					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test#")
 				}`),
-				ExpectError: regexp.MustCompile(`Name does not match regex\.`),
+				ExpectError: regexp.MustCompile(`Name does not match\s+regex\.`),
 			},
 		},
 	})

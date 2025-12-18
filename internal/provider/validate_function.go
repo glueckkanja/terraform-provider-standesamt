@@ -5,18 +5,12 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/function"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"regexp"
-	"strings"
-	"terraform-provider-standesamt/internal/random"
 	s "terraform-provider-standesamt/internal/schema"
 	"terraform-provider-standesamt/internal/tools"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var _ function.Function = &ValidateFunction{}
@@ -94,199 +88,23 @@ func (f *ValidateFunction) Definition(_ context.Context, _ function.DefinitionRe
 }
 
 func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
-	var (
-		model             = configurationsModel{}
-		name              types.String
-		nameType          string
-		result            buildNameResultModel
-		configurations    types.Object
-		settingsDynamic   types.Dynamic
-		buildNameSettings s.BuildNameSettingsModel
-		typeSchema        s.NamingSchema
-		diagnose          diag.Diagnostics
-	)
-
-	if resp.Error = req.Arguments.Get(ctx, &configurations, &nameType, &settingsDynamic, &name); resp.Error != nil {
+	// Parse and validate input arguments
+	model, nameType, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
+	if err != nil {
 		return
 	}
 
-	diags := configurations.As(ctx, &model, basetypes.ObjectAsOptions{})
-	resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diags))
-
-	for k, o := range model.Schema {
-		if k == nameType {
-			diagnose = o.As(ctx, &typeSchema, basetypes.ObjectAsOptions{})
-
-			resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
-			break
-		}
+	// Build the resource name using the nameBuilder
+	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings)
+	resultName := builder.buildName(name, resp)
+	if resp.Error != nil {
+		return
 	}
 
-	if !settingsDynamic.IsNull() && !settingsDynamic.IsUnderlyingValueNull() {
-		switch settingsDynamic.UnderlyingValue().(type) {
-		case types.Object:
-			// Parse optional settings from dynamic parameter
-			// The String() function returns a JSON representation of the object,
-			// which we can unmarshal into our struct leveraging json.omitempty tags
-			// to handle optional attributes that may not be present
-			err := json.Unmarshal([]byte(settingsDynamic.UnderlyingValue().String()), &buildNameSettings)
-			if err != nil {
-				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
-				break
-			}
-		default:
-			resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, "settingsDynamic is not an object"))
-			return
-		}
-	}
-
-	result.SetConvention(&buildNameSettings, &model)
-
-	if result.Convention.ValueString() == "default" {
-		var location string
-		if buildNameSettings.Location != "" {
-			location = buildNameSettings.Location
-		} else if !model.Configuration.Location.IsNull() {
-			location = model.Configuration.Location.ValueString()
-		} else {
-			location = ""
-		}
-
-		if location != "" {
-			if v, ok := model.Locations[location]; ok {
-				result.Location = v
-			} else {
-				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(0, "location not found in provided locations map"))
-			}
-		}
-
-		if buildNameSettings.Environment != "" {
-			result.Environment = types.StringValue(buildNameSettings.Environment)
-		} else if typeSchema.Configuration.UseEnvironment.ValueBool() {
-			result.Environment = model.Configuration.Environment
-		} else {
-			result.Environment = types.StringValue("")
-		}
-
-		if buildNameSettings.Separator != "" {
-			result.Separator = types.StringValue(buildNameSettings.Separator)
-		} else if typeSchema.Configuration.UseSeparator.ValueBool() {
-			result.Separator = model.Configuration.Separator
-		} else {
-			result.Separator = types.StringValue("")
-		}
-
-		result.NamePrecedence, diagnose = types.ListValueFrom(ctx, types.StringType, s.DefaultNamePrecedence[:])
-		resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
-
-		var itemsNamePrecedence = typeSchema.Configuration.NamePrecedence.Elements()
-		if len(itemsNamePrecedence) > 0 {
-			tflog.Debug(ctx, "build_resource_name: setting NamePrecedence from schema")
-			result.NamePrecedence = typeSchema.Configuration.NamePrecedence
-		}
-
-		if len(buildNameSettings.NamePrecedence) > 0 {
-			result.NamePrecedence, diagnose = types.ListValueFrom(ctx, types.StringType, buildNameSettings.NamePrecedence)
-			resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
-		}
-
-		if len(buildNameSettings.Prefixes) == 0 || buildNameSettings.Prefixes == nil {
-			result.Prefixes = model.Configuration.Prefixes
-		} else {
-			result.Prefixes, diagnose = types.ListValueFrom(ctx, types.StringType, buildNameSettings.Prefixes)
-			resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
-		}
-
-		if len(buildNameSettings.Suffixes) == 0 || buildNameSettings.Suffixes == nil {
-			result.Suffixes = model.Configuration.Suffixes
-		} else {
-			result.Suffixes, diagnose = types.ListValueFrom(ctx, types.StringType, buildNameSettings.Suffixes)
-			resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
-		}
-
-		if buildNameSettings.HashLength > 0 {
-			result.HashLength = types.Int32Value(buildNameSettings.HashLength)
-		} else if model.Configuration.HashLength.ValueInt32() > 0 {
-			result.HashLength = model.Configuration.HashLength
-		} else {
-			result.HashLength = typeSchema.Configuration.HashLength
-		}
-
-		if buildNameSettings.RandomSeed > 0 {
-			result.RandomSeed = types.Int64Value(buildNameSettings.RandomSeed)
-		} else {
-			result.RandomSeed = model.Configuration.RandomSeed
-		}
-
-		var calculatedContent []string
-
-		for i := 0; i < len(result.NamePrecedence.Elements()); i++ {
-
-			switch c := (result.NamePrecedence.Elements())[i].String(); strings.Trim(c, "\"") {
-			case "abbreviation":
-				if len(typeSchema.Abbreviation.String()) > 0 {
-					calculatedContent = append(calculatedContent, tools.GetBaseString(typeSchema.Abbreviation))
-				}
-			case "prefixes":
-				for j := 0; j < len(result.Prefixes.Elements()); j++ {
-					calculatedContent = append(calculatedContent,
-						strings.Trim(result.Prefixes.Elements()[j].String(), "\""))
-				}
-			case "suffixes":
-				for j := 0; j < len(result.Suffixes.Elements()); j++ {
-					calculatedContent = append(calculatedContent,
-						strings.Trim(result.Suffixes.Elements()[j].String(), "\""))
-				}
-			case "name":
-				if len(name.String()) > 0 {
-					calculatedContent = append(calculatedContent, tools.GetBaseString(name))
-				}
-			case "environment":
-				if len(result.Environment.ValueString()) > 0 {
-					calculatedContent = append(calculatedContent, tools.GetBaseString(result.Environment))
-				}
-			case "location":
-				if len(result.Location.ValueString()) > 0 {
-					calculatedContent = append(calculatedContent, tools.GetBaseString(result.Location))
-				}
-			case "hash":
-				if !result.HashLength.IsNull() {
-					var hashLength = result.HashLength.ValueInt32()
-					if hashLength > 0 {
-						randomHash := random.Hash(int(hashLength), result.RandomSeed.ValueInt64())
-						calculatedContent = append(calculatedContent, randomHash)
-					}
-				}
-			}
-		}
-		result.Name = types.StringValue(strings.Join(calculatedContent, result.Separator.ValueString()))
-	} else { // end if result.Convention.ValueString() == "default"
-		tflog.Debug(ctx, "configuring with passthrough convention")
-		result.Name = name
-	}
-
-	// Check if any of the use_lower_case settings are set to true
-	// and convert the full name to lower case before validation
-	if typeSchema.Configuration.UseLowerCase.ValueBool() || model.Configuration.Lowercase.ValueBool() || buildNameSettings.Lowercase {
-		result.Name = toLower(result.Name)
-	}
-
-	resultNameStr := tools.GetBaseString(result.Name)
+	resultNameStr := tools.GetBaseString(resultName)
 
 	// Perform validation and collect results
-	regexValid := true
-	lengthValid := true
-	doubleHyphensFound := strings.Contains(resultNameStr, "--")
-
-	re := regexp.MustCompile(tools.GetBaseString(typeSchema.ValidationRegex))
-	if !re.MatchString(resultNameStr) {
-		regexValid = false
-	}
-
-	nameLength := int64(len(resultNameStr))
-	if nameLength > typeSchema.MaxLength.ValueInt64() || nameLength < typeSchema.MinLength.ValueInt64() {
-		lengthValid = false
-	}
+	validation := validateName(resultNameStr, typeSchema)
 
 	// Build the validation result map
 	regexObj, diags := types.ObjectValue(
@@ -295,8 +113,8 @@ func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, res
 			"match": types.StringType,
 		},
 		map[string]attr.Value{
-			"valid": types.BoolValue(regexValid),
-			"match": types.StringValue(tools.GetBaseString(typeSchema.ValidationRegex)),
+			"valid": types.BoolValue(validation.RegexValid),
+			"match": types.StringValue(validation.ValidationRegex),
 		},
 	)
 	if diags.HasError() {
@@ -312,10 +130,10 @@ func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, res
 			"min":   types.Int64Type,
 		},
 		map[string]attr.Value{
-			"valid": types.BoolValue(lengthValid),
-			"is":    types.Int64Value(nameLength),
-			"max":   types.Int64Value(typeSchema.MaxLength.ValueInt64()),
-			"min":   types.Int64Value(typeSchema.MinLength.ValueInt64()),
+			"valid": types.BoolValue(validation.LengthValid),
+			"is":    types.Int64Value(validation.NameLength),
+			"max":   types.Int64Value(validation.MaxLength),
+			"min":   types.Int64Value(validation.MinLength),
 		},
 	)
 	if diags.HasError() {
@@ -348,9 +166,9 @@ func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, res
 			"regex":                 regexObj,
 			"length":                lengthObj,
 			"type":                  types.StringValue(nameType),
-			"name":                  types.StringValue(resultNameStr),
-			"double_hyphens_denied": types.BoolValue(typeSchema.Configuration.DenyDoubleHyphens.ValueBool()),
-			"double_hyphens_found":  types.BoolValue(doubleHyphensFound),
+			"name":                  types.StringValue(validation.Name),
+			"double_hyphens_denied": types.BoolValue(validation.DenyDoubleHyphens),
+			"double_hyphens_found":  types.BoolValue(validation.DoubleHyphensFound),
 		},
 	)
 	if diags.HasError() {
