@@ -163,6 +163,40 @@ func TestNameFunction_AzureCaf_Full(t *testing.T) {
 	})
 }
 
+func TestNameFunction_AzureCaf_AllNullValues(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_null_values, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// With all null values, it should use the default configuration from the data source
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg-test")),
+				},
+			},
+		},
+	})
+}
+
+func TestNameFunction_AzureCaf_PartialNullValues(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_partial_null_values, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "TEST")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// With partial null values (no prefixes/suffixes), hash should still be included
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg_test_we_tst_qffc")),
+				},
+			},
+		},
+	})
+}
+
 const schema_config = `
 data "standesamt_config" "example" {}
 
@@ -188,6 +222,32 @@ environment = "tst"
 prefixes = ["pre1", "pre2"]
 suffixes = ["suf1", "suf2"]
 name_precedence = ["abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"]
+hash_length = 4
+random_seed = 1234
+separator = "_"
+location = "westeurope"
+lowercase = true
+`)
+
+var remote_schema_config_with_null_values = fmt.Sprintf(schema_config, `
+convention = null
+environment = null
+prefixes = null
+suffixes = null
+name_precedence = null
+hash_length = null
+random_seed = null
+separator = null
+location = null
+lowercase = null
+`)
+
+var remote_schema_config_with_partial_null_values = fmt.Sprintf(schema_config, `
+convention = "default"
+environment = "tst"
+prefixes = null
+suffixes = null
+name_precedence = null
 hash_length = 4
 random_seed = 1234
 separator = "_"

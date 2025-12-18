@@ -34,20 +34,21 @@ type JsonConfigurationSchema struct {
 
 type JsonNamingSchemaMap map[string]JsonNamingSchema
 
-// This struct is defined as an workaround for the overrides parameter
-// Using json omitempty and Terraform Dynamic types gives us a way of
-// dealing with optional parameters
+// BuildNameSettingsModel contains optional settings that can override
+// the default naming configuration. All fields use Go zero values
+// to indicate "not set", which allows the calling code to only apply
+// settings that were explicitly provided.
 type BuildNameSettingsModel struct {
-	Convention     string   `json:"convention,omitempty"`
-	Environment    string   `json:"environment,omitempty"`
-	Prefixes       []string `json:"prefixes,omitempty"`
-	Suffixes       []string `json:"suffixes,omitempty"`
-	NamePrecedence []string `json:"name_precedence,omitempty"`
-	HashLength     int32    `json:"hash_length,omitempty"`
-	RandomSeed     int64    `json:"random_seed,omitempty"`
-	Separator      string   `json:"separator,omitempty"`
-	Location       string   `json:"location,omitempty"`
-	Lowercase      bool     `json:"lowercase,omitempty"`
+	Convention     string
+	Environment    string
+	Prefixes       []string
+	Suffixes       []string
+	NamePrecedence []string
+	HashLength     int32
+	RandomSeed     int64
+	Separator      string
+	Location       string
+	Lowercase      bool
 }
 
 type NamingSchemaMap map[string]NamingSchema

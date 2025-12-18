@@ -5,11 +5,12 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"regexp"
-	"testing"
 )
 
 func TestValidateFunction_Null(t *testing.T) {
@@ -324,6 +325,68 @@ func TestValidateFunction_AzureCaf_Full(t *testing.T) {
 						"length": knownvalue.ObjectExact(map[string]knownvalue.Check{
 							"valid": knownvalue.Bool(true),
 							"is":    knownvalue.Int64Exact(39),
+							"max":   knownvalue.Int64Exact(90),
+							"min":   knownvalue.Int64Exact(1),
+						}),
+						"double_hyphens_denied": knownvalue.Bool(false),
+						"double_hyphens_found":  knownvalue.Bool(false),
+					})),
+				},
+			},
+		},
+	})
+}
+
+func TestValidateFunction_AzureCaf_AllNullValues(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_null_values, `output "test" {
+					value = provider::standesamt::validate(local.config, "azurerm_resource_group", local.settings, "test")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("test", knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"name": knownvalue.StringExact("rg-test"),
+						"type": knownvalue.StringExact("azurerm_resource_group"),
+						"regex": knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"valid": knownvalue.Bool(true),
+							"match": knownvalue.StringExact("^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"),
+						}),
+						"length": knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"valid": knownvalue.Bool(true),
+							"is":    knownvalue.Int64Exact(7),
+							"max":   knownvalue.Int64Exact(90),
+							"min":   knownvalue.Int64Exact(1),
+						}),
+						"double_hyphens_denied": knownvalue.Bool(false),
+						"double_hyphens_found":  knownvalue.Bool(false),
+					})),
+				},
+			},
+		},
+	})
+}
+
+func TestValidateFunction_AzureCaf_PartialNullValues(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", remote_schema_config_with_partial_null_values, `output "test" {
+					value = provider::standesamt::validate(local.config, "azurerm_resource_group", local.settings, "TEST")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("test", knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"name": knownvalue.StringExact("rg_test_we_tst_qffc"),
+						"type": knownvalue.StringExact("azurerm_resource_group"),
+						"regex": knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"valid": knownvalue.Bool(true),
+							"match": knownvalue.StringExact("^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"),
+						}),
+						"length": knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"valid": knownvalue.Bool(true),
+							"is":    knownvalue.Int64Exact(19),
 							"max":   knownvalue.Int64Exact(90),
 							"min":   knownvalue.Int64Exact(1),
 						}),
