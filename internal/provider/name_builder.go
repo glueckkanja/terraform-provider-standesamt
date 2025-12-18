@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"terraform-provider-standesamt/internal/random"
@@ -32,12 +33,12 @@ type nameBuilder struct {
 func validateJSONString(jsonStr string) error {
 	// Check for <null> pattern which is invalid JSON
 	if strings.Contains(jsonStr, "<null>") {
-		return json.Unmarshal([]byte("invalid"), new(interface{})) // Return a JSON parse error
+		return fmt.Errorf("invalid JSON: contains <null> pattern")
 	}
 	// Check if it starts with < which could indicate malformed null values
 	trimmed := strings.TrimSpace(jsonStr)
 	if strings.HasPrefix(trimmed, "<") {
-		return json.Unmarshal([]byte("invalid"), new(interface{})) // Return a JSON parse error
+		return fmt.Errorf("invalid JSON: starts with < character")
 	}
 	// Try to validate it's proper JSON
 	var temp interface{}
@@ -98,13 +99,13 @@ func parseArguments(
 			// which we can unmarshal into our struct leveraging json.omitempty tags
 			// to handle optional attributes that may not be present
 			jsonStr := settingsDynamic.UnderlyingValue().String()
-			
+
 			// Validate JSON before unmarshalling to catch invalid patterns like <null>
 			if err := validateJSONString(jsonStr); err != nil {
 				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, "invalid JSON in settings parameter: "+err.Error()))
 				return nil, "", nil, types.String{}, nil, resp.Error
 			}
-			
+
 			err := json.Unmarshal([]byte(jsonStr), &buildNameSettings)
 			if err != nil {
 				resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
