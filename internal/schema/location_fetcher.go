@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"terraform-provider-standesamt/internal/azure"
 	"terraform-provider-standesamt/internal/tools"
 )
@@ -95,7 +96,7 @@ func (f *AzureLocationFetcher) Fetch(ctx context.Context) (LocationsMapSchema, e
 	// Save to cache
 	if err := f.saveToCache(locationsMap); err != nil {
 		// Log warning but don't fail
-		fmt.Printf("Warning: failed to cache Azure locations: %v\n", err)
+		tflog.Warn(ctx, "Failed to cache Azure locations", map[string]interface{}{"error": err.Error()})
 	}
 
 	return locationsMap, nil
