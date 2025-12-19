@@ -25,6 +25,8 @@ type LocationMetadata struct {
 	Latitude         string
 	Longitude        string
 	PhysicalLocation string
+	RegionType       string
+	RegionCategory   string
 	PairedRegion     []string
 }
 
@@ -41,7 +43,9 @@ func NewLocationClient(config *Config) (*LocationClient, error) {
 	return &LocationClient{config: config}, nil
 }
 
-// GetLocations fetches all available Azure locations for the configured subscription
+// GetLocations fetches all available Azure locations for the configured subscription.
+// Only physical locations are returned (regionType == "Physical").
+// Logical regions and edge zones are filtered out.
 func (c *LocationClient) GetLocations(ctx context.Context) ([]Location, error) {
 	cred, err := c.config.GetCredential(ctx)
 	if err != nil {
@@ -71,8 +75,12 @@ func (c *LocationClient) GetLocations(ctx context.Context) ([]Location, error) {
 				continue
 			}
 
-			// Only include physical locations (not logical/edge zones)
-			if loc.Type != nil && *loc.Type != armsubscriptions.LocationTypeRegion {
+			// Filter by regionType - only include "Physical" regions
+			// This excludes logical regions and edge zones
+			if loc.Metadata == nil || loc.Metadata.RegionType == nil {
+				continue
+			}
+			if *loc.Metadata.RegionType != armsubscriptions.RegionTypePhysical {
 				continue
 			}
 
@@ -82,19 +90,19 @@ func (c *LocationClient) GetLocations(ctx context.Context) ([]Location, error) {
 				RegionalDisplayName: safeString(loc.RegionalDisplayName),
 			}
 
-			if loc.Metadata != nil {
-				location.Metadata = LocationMetadata{
-					GeographyGroup:   safeString(loc.Metadata.GeographyGroup),
-					Latitude:         safeString(loc.Metadata.Latitude),
-					Longitude:        safeString(loc.Metadata.Longitude),
-					PhysicalLocation: safeString(loc.Metadata.PhysicalLocation),
-				}
+			location.Metadata = LocationMetadata{
+				GeographyGroup:   safeString(loc.Metadata.GeographyGroup),
+				Latitude:         safeString(loc.Metadata.Latitude),
+				Longitude:        safeString(loc.Metadata.Longitude),
+				PhysicalLocation: safeString(loc.Metadata.PhysicalLocation),
+				RegionType:       string(*loc.Metadata.RegionType),
+				RegionCategory:   safeRegionCategory(loc.Metadata.RegionCategory),
+			}
 
-				if loc.Metadata.PairedRegion != nil {
-					for _, pr := range loc.Metadata.PairedRegion {
-						if pr.Name != nil {
-							location.Metadata.PairedRegion = append(location.Metadata.PairedRegion, *pr.Name)
-						}
+			if loc.Metadata.PairedRegion != nil {
+				for _, pr := range loc.Metadata.PairedRegion {
+					if pr.Name != nil {
+						location.Metadata.PairedRegion = append(location.Metadata.PairedRegion, *pr.Name)
 					}
 				}
 			}
@@ -106,8 +114,10 @@ func (c *LocationClient) GetLocations(ctx context.Context) ([]Location, error) {
 	return locations, nil
 }
 
-// GetLocationsMap returns a map of location names to their short names (same as name by default)
-// This is the format expected by the schema package (LocationsMapSchema)
+// GetLocationsMap returns a map of location names to their short geo-codes.
+// This is the format expected by the schema package (LocationsMapSchema).
+// By default, it applies the official Microsoft Azure Backup geo-code mappings.
+// Users can override these with location_aliases in the provider config.
 func (c *LocationClient) GetLocationsMap(ctx context.Context) (map[string]string, error) {
 	locations, err := c.GetLocations(ctx)
 	if err != nil {
@@ -116,10 +126,9 @@ func (c *LocationClient) GetLocationsMap(ctx context.Context) (map[string]string
 
 	result := make(map[string]string, len(locations))
 	for _, loc := range locations {
-		// By default, use the location name as both key and value
-		// The key is the full name (e.g., "eastus"), value is the short name
-		// Users can override these with location_aliases in the provider config
-		result[loc.Name] = loc.Name
+		// Apply the default geo-code mapping if available,
+		// otherwise use the location name as the value
+		result[loc.Name] = GetGeoCode(loc.Name)
 	}
 
 	return result, nil
@@ -131,6 +140,14 @@ func safeString(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// safeRegionCategory safely converts a RegionCategory pointer to string
+func safeRegionCategory(rc *armsubscriptions.RegionCategory) string {
+	if rc == nil {
+		return ""
+	}
+	return string(*rc)
 }
 
 // NormalizeLocationName normalizes a location name for comparison

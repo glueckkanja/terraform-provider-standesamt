@@ -70,9 +70,10 @@ func TestAccLocationsDataSource_Azure(t *testing.T) {
 				Config: testAccLocationsDataSourceConfig_Azure(subscriptionId),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.standesamt_locations.test", "locations.%"),
-					// Azure should return common regions
-					resource.TestCheckResourceAttrSet("data.standesamt_locations.test", "locations.eastus"),
-					resource.TestCheckResourceAttrSet("data.standesamt_locations.test", "locations.westeurope"),
+					// Azure should return common regions with geo-codes applied
+					resource.TestCheckResourceAttr("data.standesamt_locations.test", "locations.eastus", "eus"),
+					resource.TestCheckResourceAttr("data.standesamt_locations.test", "locations.westeurope", "we"),
+					resource.TestCheckResourceAttr("data.standesamt_locations.test", "locations.germanywestcentral", "gwc"),
 				),
 			},
 		},
