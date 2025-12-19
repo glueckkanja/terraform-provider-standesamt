@@ -45,6 +45,8 @@ func TestAccLocationsDataSource_SchemaWithAliases(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.standesamt_locations.test", "locations.%"),
 					// Verify alias is applied - westeurope should have value "weu"
 					resource.TestCheckResourceAttr("data.standesamt_locations.test", "locations.westeurope", "weu"),
+					// Verify alias is applied - eastus should have value "eus"
+					resource.TestCheckResourceAttr("data.standesamt_locations.test", "locations.eastus", "eus"),
 				),
 			},
 		},
