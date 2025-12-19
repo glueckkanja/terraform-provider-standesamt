@@ -38,6 +38,50 @@ provider "standesamt" {
     custom_url = "https://example.com/path/to/schema.zip"
   }
 }
+
+# Provider configuration using Azure as location source
+# This fetches locations directly from the Azure Resource Manager API
+provider "standesamt" {
+  alias           = "azure_locations"
+  location_source = "azure"
+
+  # Azure authentication configuration
+  azure = {
+    subscription_id = "00000000-0000-0000-0000-000000000000"
+    use_cli         = true # Uses Azure CLI for authentication
+  }
+
+  # Optional: Remap location short names
+  location_aliases = {
+    eastus             = "eus"
+    westeurope         = "weu"
+    germanywestcentral = "gwc"
+  }
+
+  schema_reference = {
+    path = "azure/caf"
+    ref  = "2025.04"
+  }
+}
+
+# Provider configuration with Azure locations using Service Principal
+provider "standesamt" {
+  alias           = "azure_spn"
+  location_source = "azure"
+
+  azure = {
+    subscription_id = "00000000-0000-0000-0000-000000000000"
+    tenant_id       = "00000000-0000-0000-0000-000000000000"
+    client_id       = "00000000-0000-0000-0000-000000000000"
+    client_secret   = "your-client-secret"
+  }
+
+  schema_reference = {
+    path = "azure/caf"
+    ref  = "2025.04"
+  }
+}
+
 # Provider configuration using environment variables
 # The following environment variables are supported:
 # - SA_ENVIRONMENT: Sets the environment (e.g., 'prod', 'dev', 'test')
@@ -46,6 +90,17 @@ provider "standesamt" {
 # - SA_RANDOM_SEED: Sets the random seed for unique name generation
 # - SA_HASH_LENGTH: Sets the default hash length
 # - SA_LOWERCASE: Controls lowercase output ('true' or 'false')
+# - SA_LOCATION_SOURCE: Sets the location source ('schema' or 'azure')
+#
+# Azure authentication environment variables (compatible with azurerm):
+# - ARM_SUBSCRIPTION_ID: Azure subscription ID
+# - ARM_TENANT_ID: Azure tenant ID
+# - ARM_CLIENT_ID: Service principal client ID
+# - ARM_CLIENT_SECRET: Service principal client secret
+# - ARM_USE_CLI: Use Azure CLI authentication ('true' or 'false')
+# - ARM_USE_MSI: Use Managed Service Identity ('true' or 'false')
+# - ARM_USE_OIDC: Use OpenID Connect authentication ('true' or 'false')
+# - ARM_ENVIRONMENT: Azure environment ('public', 'usgovernment', 'china')
 provider "standesamt" {
   alias = "from_env"
   schema_reference = {
@@ -60,9 +115,12 @@ provider "standesamt" {
 
 ### Optional
 
+- `azure` (Attributes) Azure authentication configuration. Required when `location_source` is `azure`. Supports multiple authentication methods similar to the azurerm provider. (see [below for nested schema](#nestedatt--azure))
 - `convention` (String) Define the convention for naming results. Possible values are 'default' and 'passthrough'. Default 'default'
 - `environment` (String) Define the environment for the naming schema. Normally this is the name of the environment, e.g. 'prod', 'dev', 'test'.
 - `hash_length` (Number) Default hash length. Overrides all schema configurations.
+- `location_aliases` (Map of String) A map of location name aliases. Use this to remap location short names, e.g. `{ eastus = "eus", westeurope = "weu" }`. The key is the original name (from schema or Azure API), the value is the replacement.
+- `location_source` (String) The source for location data. Possible values are `schema` (default) to use the schema library, or `azure` to fetch locations from the Azure Resource Manager API.
 - `lowercase` (Boolean) Control if the resulting name should be lower case. Default 'false'
 - `random_seed` (Number) A random seed used by the random number generator. This is used to generate a random name for the naming schema. The default value is 1337. Make sure to update this value to avoid collisions for globally unique names.
 - `schema_reference` (Attributes) A reference to a Naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2025.04`), or a `custom_url` to be supplied to go-getter.
@@ -79,6 +137,23 @@ provider "standesamt" {
 
     The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library). (see [below for nested schema](#nestedatt--schema_reference))
 - `separator` (String) The separator to use for generating the resulting name. Default '-'
+
+<a id="nestedatt--azure"></a>
+### Nested Schema for `azure`
+
+Optional:
+
+- `client_certificate_password` (String, Sensitive) The password for the client certificate.
+- `client_certificate_path` (String) The path to a client certificate for Service Principal authentication.
+- `client_id` (String) The Client ID for Service Principal authentication.
+- `client_secret` (String, Sensitive) The Client Secret for Service Principal authentication.
+- `environment` (String) The Azure environment to use. Possible values are `public`, `usgovernment`, `china`. Default `public`.
+- `subscription_id` (String) The Subscription ID to use for fetching Azure locations. Required when `location_source` is `azure`.
+- `tenant_id` (String) The Tenant ID for authentication.
+- `use_cli` (Boolean) Use Azure CLI for authentication. Default `true`.
+- `use_msi` (Boolean) Use Managed Service Identity for authentication. Default `false`.
+- `use_oidc` (Boolean) Use OpenID Connect for authentication. Default `false`.
+
 
 <a id="nestedatt--schema_reference"></a>
 ### Nested Schema for `schema_reference`
