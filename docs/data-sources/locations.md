@@ -3,12 +3,12 @@
 page_title: "standesamt_locations Data Source - standesamt"
 subcategory: ""
 description: |-
-  Data source to build a map of the locations schema file.
+  Data source to build a map of the locations. The source of locations depends on the provider configuration: either from the schema library or from the Azure Resource Manager API.
 ---
 
 # standesamt_locations (Data Source)
 
-Data source to build a map of the locations schema file.
+Data source to build a map of the locations. The source of locations depends on the provider configuration: either from the schema library or from the Azure Resource Manager API.
 
 ## Example Usage
 
@@ -43,4 +43,4 @@ output "all_locations" {
 
 ### Read-Only
 
-- `locations` (Map of String) You can use this map to pass to the name function and use the location in the name.
+- `locations` (Map of String) A map of location names to their short names. You can use this map to pass to the name function and use the location in the name.

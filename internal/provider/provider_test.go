@@ -84,6 +84,7 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	_ = os.Unsetenv("SA_RANDOM_SEED")
 	_ = os.Unsetenv("SA_HASH_LENGTH")
 	_ = os.Unsetenv("SA_LOWERCASE")
+	_ = os.Unsetenv("SA_LOCATION_SOURCE")
 
 	data := &providerData{}
 	data.configProviderFromEnvironment()
@@ -123,4 +124,200 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	diags = data.configProviderFromEnvironment()
 	assert.True(t, data.Convention.IsNull())
 	assert.True(t, diags.HasError())
+}
+
+func TestConfigureLocationSourceFromEnvironment(t *testing.T) {
+	// Unset all environment variables
+	_ = os.Unsetenv("SA_LOCATION_SOURCE")
+
+	data := &providerData{}
+	diags := data.configProviderFromEnvironment()
+	assert.False(t, diags.HasError())
+	assert.True(t, data.LocationSource.IsNull())
+
+	// Test valid value: schema
+	t.Setenv("SA_LOCATION_SOURCE", "schema")
+	data = &providerData{}
+	diags = data.configProviderFromEnvironment()
+	assert.False(t, diags.HasError())
+	assert.Equal(t, "schema", data.LocationSource.ValueString())
+
+	// Test valid value: azure
+	t.Setenv("SA_LOCATION_SOURCE", "azure")
+	data = &providerData{}
+	diags = data.configProviderFromEnvironment()
+	assert.False(t, diags.HasError())
+	assert.Equal(t, "azure", data.LocationSource.ValueString())
+
+	// Test invalid value
+	t.Setenv("SA_LOCATION_SOURCE", "invalid")
+	data = &providerData{}
+	diags = data.configProviderFromEnvironment()
+	assert.True(t, diags.HasError())
+	assert.True(t, data.LocationSource.IsNull())
+}
+
+func TestConfigureAzureFromEnvironment(t *testing.T) {
+	// Clean up all ARM_* environment variables
+	armVars := []string{
+		"ARM_CLIENT_ID",
+		"ARM_CLIENT_SECRET",
+		"ARM_CLIENT_CERTIFICATE_PATH",
+		"ARM_CLIENT_CERTIFICATE_PASSWORD",
+		"ARM_TENANT_ID",
+		"ARM_SUBSCRIPTION_ID",
+		"ARM_ENVIRONMENT",
+		"ARM_USE_CLI",
+		"ARM_USE_MSI",
+		"ARM_USE_OIDC",
+	}
+	for _, v := range armVars {
+		_ = os.Unsetenv(v)
+	}
+
+	// Test: no ARM variables set, AzureConfig should remain null
+	data := &providerData{}
+	err := data.configAzureFromEnvironment()
+	assert.NoError(t, err)
+	assert.True(t, data.AzureConfig.IsNull())
+
+	// Test: set some ARM variables
+	t.Setenv("ARM_SUBSCRIPTION_ID", "test-sub-id")
+	t.Setenv("ARM_TENANT_ID", "test-tenant-id")
+	t.Setenv("ARM_CLIENT_ID", "test-client-id")
+	t.Setenv("ARM_USE_CLI", "true")
+
+	data = &providerData{}
+	err = data.configAzureFromEnvironment()
+	assert.NoError(t, err)
+	assert.False(t, data.AzureConfig.IsNull())
+
+	// Extract and verify values
+	azureConfig, diags := data.getAzureConfig(t.Context())
+	assert.False(t, diags.HasError())
+	assert.NotNil(t, azureConfig)
+	assert.Equal(t, "test-sub-id", azureConfig.SubscriptionId)
+	assert.Equal(t, "test-tenant-id", azureConfig.TenantId)
+	assert.Equal(t, "test-client-id", azureConfig.ClientId)
+	assert.True(t, azureConfig.UseCli)
+}
+
+func TestConfigureAzureEnvironmentValidation(t *testing.T) {
+	// Clean up
+	_ = os.Unsetenv("ARM_ENVIRONMENT")
+	_ = os.Unsetenv("ARM_SUBSCRIPTION_ID")
+
+	// Test valid environments
+	validEnvs := []string{"public", "usgovernment", "china"}
+	for _, env := range validEnvs {
+		t.Run("valid_"+env, func(t *testing.T) {
+			t.Setenv("ARM_ENVIRONMENT", env)
+			t.Setenv("ARM_SUBSCRIPTION_ID", "test-sub")
+
+			data := &providerData{}
+			err := data.configAzureFromEnvironment()
+			assert.NoError(t, err)
+		})
+	}
+
+	// Test invalid environment
+	t.Run("invalid_environment", func(t *testing.T) {
+		t.Setenv("ARM_ENVIRONMENT", "invalid")
+		t.Setenv("ARM_SUBSCRIPTION_ID", "test-sub")
+
+		data := &providerData{}
+		err := data.configAzureFromEnvironment()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid value for ARM_ENVIRONMENT")
+	})
+}
+
+func TestProviderDefaultsLocationSource(t *testing.T) {
+	_ = os.Unsetenv("SA_LOCATION_SOURCE")
+
+	data := &providerData{}
+	data.configProviderDefaults()
+
+	assert.Equal(t, "schema", data.LocationSource.ValueString())
+}
+
+func TestAzureConfigValueToAzureConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    AzureConfigValue
+		expected struct {
+			useCli         bool
+			useMsi         bool
+			useOidc        bool
+			clientId       string
+			subscriptionId string
+			environment    string
+		}
+	}{
+		{
+			name: "basic CLI config",
+			input: AzureConfigValue{
+				UseCli:         basetypes.NewBoolValue(true),
+				UseMsi:         basetypes.NewBoolValue(false),
+				UseOidc:        basetypes.NewBoolValue(false),
+				SubscriptionId: basetypes.NewStringValue("sub-123"),
+				ClientId:       basetypes.NewStringNull(),
+				ClientSecret:   basetypes.NewStringNull(),
+				TenantId:       basetypes.NewStringNull(),
+				Environment:    basetypes.NewStringNull(),
+			},
+			expected: struct {
+				useCli         bool
+				useMsi         bool
+				useOidc        bool
+				clientId       string
+				subscriptionId string
+				environment    string
+			}{
+				useCli:         true,
+				useMsi:         false,
+				useOidc:        false,
+				subscriptionId: "sub-123",
+				environment:    "public",
+			},
+		},
+		{
+			name: "service principal config",
+			input: AzureConfigValue{
+				UseCli:         basetypes.NewBoolValue(false),
+				UseMsi:         basetypes.NewBoolValue(false),
+				UseOidc:        basetypes.NewBoolValue(false),
+				SubscriptionId: basetypes.NewStringValue("sub-456"),
+				ClientId:       basetypes.NewStringValue("client-id"),
+				ClientSecret:   basetypes.NewStringValue("client-secret"),
+				TenantId:       basetypes.NewStringValue("tenant-id"),
+				Environment:    basetypes.NewStringValue("usgovernment"),
+			},
+			expected: struct {
+				useCli         bool
+				useMsi         bool
+				useOidc        bool
+				clientId       string
+				subscriptionId string
+				environment    string
+			}{
+				useCli:         false,
+				subscriptionId: "sub-456",
+				clientId:       "client-id",
+				environment:    "usgovernment",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.ToAzureConfig()
+
+			assert.Equal(t, tt.expected.useCli, result.UseCli)
+			assert.Equal(t, tt.expected.useMsi, result.UseMsi)
+			assert.Equal(t, tt.expected.useOidc, result.UseOidc)
+			assert.Equal(t, tt.expected.subscriptionId, result.SubscriptionId)
+			assert.Equal(t, tt.expected.clientId, result.ClientId)
+		})
+	}
 }
