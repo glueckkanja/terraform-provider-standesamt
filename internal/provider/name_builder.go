@@ -144,13 +144,13 @@ func parseArguments(
 	)
 
 	if resp.Error = req.Arguments.Get(ctx, &configurations, &nameType, &settingsDynamic, &name); resp.Error != nil {
-		return nil, "", nil, types.String{}, nil, resp.Error
+		return nil, "", nil, types.String{}, nil, fmt.Errorf("failed to get arguments: %s", resp.Error.Error())
 	}
 
 	diags := configurations.As(ctx, &model, basetypes.ObjectAsOptions{})
 	resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diags))
 	if resp.Error != nil {
-		return nil, "", nil, types.String{}, nil, resp.Error
+		return nil, "", nil, types.String{}, nil, fmt.Errorf("failed to parse configurations: %s", resp.Error.Error())
 	}
 
 	// Find the schema for the requested name type
@@ -160,7 +160,7 @@ func parseArguments(
 			diagnose := o.As(ctx, &typeSchema, basetypes.ObjectAsOptions{})
 			resp.Error = function.ConcatFuncErrors(resp.Error, function.FuncErrorFromDiags(ctx, diagnose))
 			if resp.Error != nil {
-				return nil, "", nil, types.String{}, nil, resp.Error
+				return nil, "", nil, types.String{}, nil, fmt.Errorf("failed to parse schema for type '%s': %s", nameType, resp.Error.Error())
 			}
 			schemaFound = true
 			break
@@ -168,8 +168,21 @@ func parseArguments(
 	}
 
 	if !schemaFound {
-		resp.Error = function.NewArgumentFuncError(1, "name_type not found in schema")
-		return nil, "", nil, types.String{}, nil, resp.Error
+		// Collect available resource types for helpful error message
+		availableTypes := make([]string, 0, len(model.Schema))
+		for k := range model.Schema {
+			availableTypes = append(availableTypes, k)
+		}
+
+		var errorMsg string
+		if len(availableTypes) == 0 {
+			errorMsg = fmt.Sprintf("resource type '%s' not found in schema. The schema appears to be empty - please verify your schema configuration is loaded correctly.", nameType)
+		} else {
+			errorMsg = fmt.Sprintf("resource type '%s' not found in schema. Available resource types (%d): %s", nameType, len(availableTypes), strings.Join(availableTypes, ", "))
+		}
+		resp.Error = function.NewArgumentFuncError(1, errorMsg)
+		// Return a standard error to ensure the nil-interface check works correctly
+		return nil, "", nil, types.String{}, nil, fmt.Errorf("%s", errorMsg)
 	}
 
 	// Parse optional settings from dynamic parameter
@@ -177,7 +190,7 @@ func parseArguments(
 		parsedSettings, err := parseSettingsFromDynamic(settingsDynamic)
 		if err != nil {
 			resp.Error = function.ConcatFuncErrors(resp.Error, function.NewArgumentFuncError(2, err.Error()))
-			return nil, "", nil, types.String{}, nil, resp.Error
+			return nil, "", nil, types.String{}, nil, fmt.Errorf("failed to parse settings: %s", err.Error())
 		}
 		buildNameSettings = *parsedSettings
 	}

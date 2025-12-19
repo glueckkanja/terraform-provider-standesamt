@@ -90,7 +90,7 @@ func (f *ValidateFunction) Definition(_ context.Context, _ function.DefinitionRe
 func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	// Parse and validate input arguments
 	model, nameType, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
-	if err != nil {
+	if err != nil || resp.Error != nil {
 		return
 	}
 
