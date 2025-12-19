@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"context"
 	"os"
 	s "terraform-provider-standesamt/internal/schema"
 	"testing"
@@ -60,7 +61,7 @@ func TestProviderDefaults(t *testing.T) {
 
 	var sourceRef s.SourceValue
 
-	diags := data.SchemaReference.As(t.Context(), &sourceRef, basetypes.ObjectAsOptions{})
+	diags := data.SchemaReference.As(context.Background(), &sourceRef, basetypes.ObjectAsOptions{})
 	assert.False(t, diags.HasError())
 
 	assert.Equal(t, "default", data.Convention.ValueString())
@@ -193,7 +194,7 @@ func TestConfigureAzureFromEnvironment(t *testing.T) {
 	assert.False(t, data.AzureConfig.IsNull())
 
 	// Extract and verify values
-	azureConfig, diags := data.getAzureConfig(t.Context())
+	azureConfig, diags := data.getAzureConfig(context.Background())
 	assert.False(t, diags.HasError())
 	assert.NotNil(t, azureConfig)
 	assert.Equal(t, "test-sub-id", azureConfig.SubscriptionId)
