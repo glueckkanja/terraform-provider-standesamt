@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // CloudEnvironment represents the Azure cloud environment
@@ -182,10 +183,82 @@ func (c *Config) GetCredential(ctx context.Context) (azcore.TokenCredential, err
 	return chain, nil
 }
 
-// parseCertificate parses a PEM-encoded certificate and returns the certificates and private key
+// parseCertificate parses a certificate file and returns the certificates and private key.
+//
+// Supported formats:
+//   - PKCS#12/PFX (.pfx, .p12): Recommended format for Azure certificates (auto-detected)
+//     Uses software.sslmate.com/src/go-pkcs12 for full PKCS#12 support including certificate chains
+//   - PEM format: Combined certificate and private key in PEM encoding
+//
+// PEM Private Key formats:
+//   - PRIVATE KEY (PKCS8), RSA PRIVATE KEY (PKCS1), EC PRIVATE KEY blocks
+//   - ENCRYPTED PRIVATE KEY (PKCS8 with password)
+//
+// Security Note: For PEM format, only modern PKCS8 encrypted private keys are supported.
+// Legacy PEM encryption (using weak DES/3DES) is not supported for security reasons.
+// For PKCS#12, modern encryption algorithms (AES) are supported via go-pkcs12.
+//
+// Recommended: Use PKCS#12 format for best compatibility with Azure:
+//
+//	openssl pkcs12 -export -in certificate.pem -inkey private_key.pem -out certificate.pfx
 func parseCertificate(data []byte, password string) ([]*x509.Certificate, interface{}, error) {
+	// Try PKCS#12 format first (common for Azure certificates)
+	if isPKCS12(data) {
+		return parsePKCS12(data, password)
+	}
+
+	// Fall back to PEM format
+	return parsePEM(data, password)
+}
+
+// isPKCS12 checks if the data is in PKCS#12 format
+// PKCS#12 files typically start with a specific ASN.1 sequence
+func isPKCS12(data []byte) bool {
+	// PKCS#12 files start with 0x30 (ASN.1 SEQUENCE)
+	// and are binary (not PEM text)
+	if len(data) < 4 {
+		return false
+	}
+	// Check if it looks like binary ASN.1 (not PEM text)
+	// PEM files start with "-----BEGIN"
+	if strings.HasPrefix(string(data), "-----BEGIN") {
+		return false
+	}
+	// PKCS#12 starts with 0x30 0x82 or 0x30 0x83 (ASN.1 SEQUENCE with length)
+	return data[0] == 0x30 && (data[1] == 0x82 || data[1] == 0x83 || data[1] == 0x84)
+}
+
+// parsePKCS12 parses a PKCS#12 formatted certificate.
+// Uses software.sslmate.com/src/go-pkcs12 which is the modern, maintained alternative
+// to the frozen golang.org/x/crypto/pkcs12 package.
+func parsePKCS12(data []byte, password string) ([]*x509.Certificate, interface{}, error) {
+	// DecodeChain supports full certificate chains and modern encryption algorithms
+	key, cert, caCerts, err := pkcs12.DecodeChain(data, password)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to decode PKCS#12 certificate (ensure password is correct): %w", err)
+	}
+
+	if cert == nil {
+		return nil, nil, fmt.Errorf("no certificate found in PKCS#12 data")
+	}
+	if key == nil {
+		return nil, nil, fmt.Errorf("no private key found in PKCS#12 data")
+	}
+
+	// Combine leaf certificate with CA chain
+	allCerts := []*x509.Certificate{cert}
+	if len(caCerts) > 0 {
+		allCerts = append(allCerts, caCerts...)
+	}
+
+	return allCerts, key, nil
+}
+
+// parsePEM parses a PEM-encoded certificate and returns the certificates and private key.
+func parsePEM(data []byte, password string) ([]*x509.Certificate, interface{}, error) {
 	var certs []*x509.Certificate
 	var key interface{}
+	hasPassword := password != ""
 
 	for {
 		block, rest := pem.Decode(data)
@@ -202,29 +275,44 @@ func parseCertificate(data []byte, password string) ([]*x509.Certificate, interf
 			}
 			certs = append(certs, cert)
 
+		case block.Type == "ENCRYPTED PRIVATE KEY":
+			// PKCS8 encrypted private key (modern encryption: AES, etc.)
+			if !hasPassword {
+				return nil, nil, fmt.Errorf("encrypted private key found but no password provided")
+			}
+
+			// Try to parse with pkcs8.ParsePKCS8PrivateKey which handles encrypted PKCS8
+			parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to parse PKCS8 encrypted private key: %w (ensure the certificate is in PKCS8 format with modern encryption)", err)
+			}
+			key = parsedKey
+
 		case strings.Contains(block.Type, "PRIVATE KEY"):
 			var err error
-			blockBytes := block.Bytes
 
-			// Handle encrypted private key
-			if x509.IsEncryptedPEMBlock(block) { //nolint:staticcheck
-				blockBytes, err = x509.DecryptPEMBlock(block, []byte(password)) //nolint:staticcheck
-				if err != nil {
-					return nil, nil, fmt.Errorf("failed to decrypt private key: %w", err)
+			// Check if this is actually an old-style encrypted block
+			// These have headers like "DEK-Info: DES-EDE3-CBC,..." which we don't support
+			if block.Headers != nil {
+				if _, hasEncryption := block.Headers["DEK-Info"]; hasEncryption {
+					return nil, nil, fmt.Errorf("legacy encrypted private key format detected (weak DES/3DES encryption). Please convert to PKCS8 format: openssl pkcs8 -topk8 -v2 aes-256-cbc -in old_key.pem -out new_key.pem")
 				}
 			}
 
-			// Try different key formats
-			if key, err = x509.ParsePKCS8PrivateKey(blockBytes); err == nil {
+			// Try different unencrypted key formats
+			// PKCS8 format (recommended)
+			if key, err = x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
 				continue
 			}
-			if key, err = x509.ParsePKCS1PrivateKey(blockBytes); err == nil {
+			// PKCS1 RSA format
+			if key, err = x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
 				continue
 			}
-			if key, err = x509.ParseECPrivateKey(blockBytes); err == nil {
+			// EC private key format
+			if key, err = x509.ParseECPrivateKey(block.Bytes); err == nil {
 				continue
 			}
-			return nil, nil, fmt.Errorf("failed to parse private key")
+			return nil, nil, fmt.Errorf("failed to parse private key: unsupported format or corrupted data")
 		}
 	}
 
