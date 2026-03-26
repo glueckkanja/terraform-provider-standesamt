@@ -53,10 +53,8 @@ func (r *buildNameResultModel) SetConvention(override *s.BuildNameSettingsModel,
 
 var _ function.Function = &NameFunction{}
 
-type NameFunction struct{}
-
-func NewNameFunction() function.Function {
-	return &NameFunction{}
+type NameFunction struct {
+	provider *StandesamtProvider
 }
 
 func (f *NameFunction) Metadata(_ context.Context, _ function.MetadataRequest, resp *function.MetadataResponse) {
@@ -121,14 +119,22 @@ func (f *NameFunction) Definition(_ context.Context, _ function.DefinitionReques
 
 func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	// Parse and validate input arguments
-	model, _, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
+	model, nameType, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
 	if err != nil || resp.Error != nil {
 		// Error is already set in resp.Error by parseArguments, just return
 		return
 	}
 
+	// Look up the schema-level separator override from the JSON library (if available)
+	var schemaSepOverride string
+	if f.provider != nil && f.provider.config != nil {
+		if jsonSchema, ok := f.provider.config.NamingSchemas[nameType]; ok {
+			schemaSepOverride = jsonSchema.Configuration.Separator
+		}
+	}
+
 	// Build the resource name using the nameBuilder
-	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings)
+	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings, schemaSepOverride)
 	resultName := builder.buildName(name, resp)
 	if resp.Error != nil {
 		return

@@ -15,10 +15,8 @@ import (
 
 var _ function.Function = &ValidateFunction{}
 
-type ValidateFunction struct{}
-
-func NewValidateFunction() function.Function {
-	return &ValidateFunction{}
+type ValidateFunction struct {
+	provider *StandesamtProvider
 }
 
 func (f *ValidateFunction) Metadata(_ context.Context, _ function.MetadataRequest, resp *function.MetadataResponse) {
@@ -109,8 +107,16 @@ func (f *ValidateFunction) Run(ctx context.Context, req function.RunRequest, res
 		return
 	}
 
+	// Look up the schema-level separator override from the JSON library (if available)
+	var schemaSepOverride string
+	if f.provider != nil && f.provider.config != nil {
+		if jsonSchema, ok := f.provider.config.NamingSchemas[nameType]; ok {
+			schemaSepOverride = jsonSchema.Configuration.Separator
+		}
+	}
+
 	// Build the resource name using the nameBuilder
-	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings)
+	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings, schemaSepOverride)
 	resultName := builder.buildName(name, resp)
 	if resp.Error != nil {
 		return

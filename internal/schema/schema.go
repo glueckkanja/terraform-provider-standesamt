@@ -27,6 +27,7 @@ type JsonConfigurationSchema struct {
 	UseEnvironment    bool     `json:"useEnvironment"`
 	UseLowerCase      bool     `json:"useLowerCase"`
 	UseSeparator      bool     `json:"useSeparator"`
+	Separator         string   `json:"separator,omitempty"`
 	DenyDoubleHyphens bool     `json:"denyDoubleHyphens"`
 	NamePrecedence    []string `json:"namePrecedence"`
 	HashLength        int      `json:"hashLength"`
