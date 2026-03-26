@@ -329,6 +329,7 @@ locals {
 				  use_environment		= true
 				  use_lower_case 		= false
 				  use_separator 		= true
+				  separator			= ""
 				  deny_double_hyphens = true
 				  name_precedence		= []
 				  hash_length			= 0
@@ -372,6 +373,7 @@ locals {
 				  use_environment		= false
 				  use_lower_case 		= true
 				  use_separator 		= false
+				  separator			= ""
 				  deny_double_hyphens = false
 				  name_precedence		= []
 				  hash_length			= 0
