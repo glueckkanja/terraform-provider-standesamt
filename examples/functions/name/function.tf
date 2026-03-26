@@ -26,6 +26,28 @@ locals {
   }
 }
 
-output "name" {
+# Basic usage — no overrides, uses provider defaults
+output "name_basic" {
   value = provider::standesamt::name(local.config, "azurerm_resource_group", {}, "example")
+}
+
+# Override the separator for a specific resource type on a per-call basis
+output "name_custom_separator" {
+  value = provider::standesamt::name(local.config, "azurerm_resource_group", { separator = "." }, "example")
+}
+
+# Full settings override example
+output "name_full_settings" {
+  value = provider::standesamt::name(
+    local.config,
+    "azurerm_resource_group",
+    {
+      environment = "prd"
+      separator   = "-"
+      prefixes    = ["team"]
+      suffixes    = ["001"]
+      lowercase   = true
+    },
+    "example"
+  )
 }

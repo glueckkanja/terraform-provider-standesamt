@@ -125,6 +125,76 @@ type parseSettingsResult struct {
 	settings *s.BuildNameSettingsModel
 }
 
+func makeTestNameBuilder(perCallSep, schemaSep, providerSep string, useSeparator bool) *nameBuilder {
+	return &nameBuilder{
+		model: &configurationsModel{
+			Configuration: configurationModel{
+				Separator: types.StringValue(providerSep),
+			},
+		},
+		typeSchema: &s.NamingSchema{
+			Configuration: s.Configuration{
+				UseSeparator: types.BoolValue(useSeparator),
+				Separator:    types.StringValue(schemaSep),
+			},
+		},
+		buildNameSettings: &s.BuildNameSettingsModel{Separator: perCallSep},
+		result:            &buildNameResultModel{},
+	}
+}
+
+func TestResolveSeparator(t *testing.T) {
+	tests := []struct {
+		name         string
+		perCall      string
+		schema       string
+		provider     string
+		useSeparator bool
+		want         string
+	}{
+		{
+			name:         "per-call is highest priority",
+			perCall:      ".",
+			schema:       "_",
+			provider:     "-",
+			useSeparator: true,
+			want:         ".",
+		},
+		{
+			name:         "schema separator overrides provider",
+			perCall:      "",
+			schema:       "_",
+			provider:     "-",
+			useSeparator: true,
+			want:         "_",
+		},
+		{
+			name:         "provider separator when schema is empty",
+			perCall:      "",
+			schema:       "",
+			provider:     "-",
+			useSeparator: true,
+			want:         "-",
+		},
+		{
+			name:         "no separator when useSeparator false",
+			perCall:      "",
+			schema:       "_",
+			provider:     "-",
+			useSeparator: false,
+			want:         "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nb := makeTestNameBuilder(tt.perCall, tt.schema, tt.provider, tt.useSeparator)
+			nb.resolveSeparator()
+			assert.Equal(t, tt.want, nb.result.Separator.ValueString())
+		})
+	}
+}
+
 func TestParseArguments_MissingResourceType(t *testing.T) {
 	tests := []struct {
 		name           string

@@ -92,8 +92,23 @@ func (f *NameFunction) Definition(_ context.Context, _ function.DefinitionReques
 				Description: "The resource type to use for the name.",
 			},
 			function.DynamicParameter{
-				Name:                "settings",
-				MarkdownDescription: "A map of settings to apply to the name string.",
+				Name: "settings",
+				MarkdownDescription: "An optional map of per-call overrides. All keys are optional and take " +
+					"precedence over the provider-level configuration.\n\n" +
+					"Supported keys:\n\n" +
+					"| Key | Type | Description |\n" +
+					"|---|---|---|\n" +
+					"| `convention` | `string` | Naming convention (`default` or `passthrough`). |\n" +
+					"| `environment` | `string` | Environment abbreviation (e.g. `prd`, `tst`). |\n" +
+					"| `location` | `string` | Azure location key resolved via the `locations` map. |\n" +
+					"| `separator` | `string` | Separator between name parts — overrides the schema default on a per-call basis. |\n" +
+					"| `prefixes` | `list(string)` | Prefix segments to prepend. |\n" +
+					"| `suffixes` | `list(string)` | Suffix segments to append. |\n" +
+					"| `name_precedence` | `list(string)` | Order of name segments. |\n" +
+					"| `hash_length` | `number` | Length of the random hash segment (0 = disabled). |\n" +
+					"| `random_seed` | `number` | Seed for the hash generator (for reproducible names). |\n" +
+					"| `lowercase` | `bool` | Convert the final name to lowercase. |\n\n" +
+					"Pass `{}` or `null` to use provider defaults for all settings.",
 			},
 			function.StringParameter{
 				Name:        "name",
