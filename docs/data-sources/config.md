@@ -100,6 +100,7 @@ Read-Only:
 - `deny_double_hyphens` (Boolean)
 - `hash_length` (Number)
 - `name_precedence` (List of String)
+- `separator` (String)
 - `use_environment` (Boolean)
 - `use_lower_case` (Boolean)
 - `use_separator` (Boolean)
