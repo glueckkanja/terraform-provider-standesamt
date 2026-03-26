@@ -176,6 +176,23 @@ func TestNameFunction_LowerCase(t *testing.T) {
 	})
 }
 
+func TestNameFunction_SchemaSeparatorOverride(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", config_with_schema_separator_override, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "myapp")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// provider separator is "-" but schema separator "_" must win → "rg_myapp_we"
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg_myapp_we")),
+				},
+			},
+		},
+	})
+}
+
 func TestNameFunction_AzureCaf(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -378,6 +395,49 @@ locals {
 				  name_precedence		= []
 				  hash_length			= 0
 				}				
+			}
+		}
+		locations = {
+			"westeurope" = "we"
+		}
+	}
+}
+`
+
+// Config where the schema-level separator overrides the provider-level separator.
+// Provider separator is "-", schema separator is "_" — result should use "_".
+const config_with_schema_separator_override = `
+locals {
+	settings = {}
+	config = {
+		configuration = {
+			convention 		= "default"
+			environment 		= ""
+			prefixes 			= []
+			suffixes			= []
+			name_precedence 	= ["abbreviation", "name", "location"]
+			hash_length 		= 0
+			random_seed 		= 1337
+			separator 			= "-"
+			location 			= "westeurope"
+			lowercase 			= false
+		}
+		schema = {
+			azurerm_resource_group = {
+				resource_type 		= "azurerm_resource_group"
+				abbreviation 		= "rg"
+				min_length 			= 1
+				max_length			= 90
+				validation_regex 	= "^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"
+				configuration = {
+				  use_environment		= false
+				  use_lower_case 		= false
+				  use_separator 		= true
+				  separator			= "_"
+				  deny_double_hyphens = false
+				  name_precedence		= []
+				  hash_length			= 0
+				}
 			}
 		}
 		locations = {
