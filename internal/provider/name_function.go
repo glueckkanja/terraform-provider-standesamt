@@ -125,16 +125,16 @@ func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *f
 		return
 	}
 
-	// Look up the schema-level separator override from the JSON library (if available)
-	var schemaSepOverride string
+	// Inject the schema-level separator from the JSON library into typeSchema.
+	// The field has no tfsdk tag so it is not populated during HCL unmarshal.
 	if f.provider != nil && f.provider.config != nil {
 		if jsonSchema, ok := f.provider.config.NamingSchemas[nameType]; ok {
-			schemaSepOverride = jsonSchema.Configuration.Separator
+			typeSchema.Configuration.Separator = jsonSchema.Configuration.Separator
 		}
 	}
 
 	// Build the resource name using the nameBuilder
-	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings, schemaSepOverride)
+	builder := newNameBuilder(ctx, model, typeSchema, buildNameSettings)
 	resultName := builder.buildName(name, resp)
 	if resp.Error != nil {
 		return

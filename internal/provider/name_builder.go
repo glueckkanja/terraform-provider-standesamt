@@ -22,12 +22,11 @@ import (
 
 // nameBuilder encapsulates the logic for building resource names
 type nameBuilder struct {
-	ctx                     context.Context
-	model                   *configurationsModel
-	typeSchema              *s.NamingSchema
-	buildNameSettings       *s.BuildNameSettingsModel
-	result                  *buildNameResultModel
-	schemaSeparatorOverride string
+	ctx               context.Context
+	model             *configurationsModel
+	typeSchema        *s.NamingSchema
+	buildNameSettings *s.BuildNameSettingsModel
+	result            *buildNameResultModel
 }
 
 // extractStringSlice extracts a string slice from a types.List or types.Tuple
@@ -205,15 +204,13 @@ func newNameBuilder(
 	model *configurationsModel,
 	typeSchema *s.NamingSchema,
 	buildNameSettings *s.BuildNameSettingsModel,
-	schemaSeparatorOverride string,
 ) *nameBuilder {
 	return &nameBuilder{
-		ctx:                     ctx,
-		model:                   model,
-		typeSchema:              typeSchema,
-		buildNameSettings:       buildNameSettings,
-		result:                  &buildNameResultModel{},
-		schemaSeparatorOverride: schemaSeparatorOverride,
+		ctx:               ctx,
+		model:             model,
+		typeSchema:        typeSchema,
+		buildNameSettings: buildNameSettings,
+		result:            &buildNameResultModel{},
 	}
 }
 
@@ -256,15 +253,15 @@ func (nb *nameBuilder) resolveEnvironment() {
 // resolveSeparator determines the separator to use.
 // Priority chain (highest to lowest):
 //  1. Per-call settings.separator
-//  2a. Schema-level separator from JSON library (when useSeparator=true)
-//  2b. Provider-level separator (when useSeparator=true, no schema override)
+//  2a. Schema-level separator from JSON library (injected into typeSchema.Configuration.Separator)
+//  2b. Provider-level separator (when useSeparator=true, no schema-level value)
 //  3. Empty string (when useSeparator=false)
 func (nb *nameBuilder) resolveSeparator() {
 	if nb.buildNameSettings.Separator != "" {
 		nb.result.Separator = types.StringValue(nb.buildNameSettings.Separator)
 	} else if nb.typeSchema.Configuration.UseSeparator.ValueBool() {
-		if nb.schemaSeparatorOverride != "" {
-			nb.result.Separator = types.StringValue(nb.schemaSeparatorOverride)
+		if nb.typeSchema.Configuration.Separator != "" {
+			nb.result.Separator = types.StringValue(nb.typeSchema.Configuration.Separator)
 		} else {
 			nb.result.Separator = nb.model.Configuration.Separator
 		}

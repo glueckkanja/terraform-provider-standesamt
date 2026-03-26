@@ -135,11 +135,11 @@ func makeTestNameBuilder(perCallSep, schemaOverride, providerSep string, useSepa
 		typeSchema: &s.NamingSchema{
 			Configuration: s.Configuration{
 				UseSeparator: types.BoolValue(useSeparator),
+				Separator:    schemaOverride,
 			},
 		},
-		buildNameSettings:       &s.BuildNameSettingsModel{Separator: perCallSep},
-		result:                  &buildNameResultModel{},
-		schemaSeparatorOverride: schemaOverride,
+		buildNameSettings: &s.BuildNameSettingsModel{Separator: perCallSep},
+		result:            &buildNameResultModel{},
 	}
 	return nb
 }
