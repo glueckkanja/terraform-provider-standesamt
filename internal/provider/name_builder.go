@@ -250,10 +250,13 @@ func (nb *nameBuilder) resolveEnvironment() {
 	}
 }
 
-// resolveSeparator determines the separator to use
+// resolveSeparator determines the separator to use.
+// Priority: per-call settings > schema-level separator > provider-level separator (if use_separator) > empty.
 func (nb *nameBuilder) resolveSeparator() {
 	if nb.buildNameSettings.Separator != "" {
 		nb.result.Separator = types.StringValue(nb.buildNameSettings.Separator)
+	} else if nb.typeSchema.Configuration.Separator.ValueString() != "" {
+		nb.result.Separator = nb.typeSchema.Configuration.Separator
 	} else if nb.typeSchema.Configuration.UseSeparator.ValueBool() {
 		nb.result.Separator = nb.model.Configuration.Separator
 	} else {

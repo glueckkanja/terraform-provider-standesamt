@@ -160,6 +160,23 @@ func TestNameFunction_ResourceGroup(t *testing.T) {
 	})
 }
 
+func TestNameFunction_SchemaSeparatorOverride(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", config_with_schema_separator_override, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "test")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Provider-level separator is "-" but schema overrides it with "."
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("rg.test.we")),
+				},
+			},
+		},
+	})
+}
+
 func TestNameFunction_LowerCase(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -329,10 +346,11 @@ locals {
 				  use_environment		= true
 				  use_lower_case 		= false
 				  use_separator 		= true
+				  separator 			= ""
 				  deny_double_hyphens = true
 				  name_precedence		= []
 				  hash_length			= 0
-				}				
+				}
 			}
 		}
 		locations = {
@@ -372,10 +390,53 @@ locals {
 				  use_environment		= false
 				  use_lower_case 		= true
 				  use_separator 		= false
+				  separator 			= ""
 				  deny_double_hyphens = false
 				  name_precedence		= []
 				  hash_length			= 0
-				}				
+				}
+			}
+		}
+		locations = {
+			"westeurope" = "we"
+		}
+	}
+}
+`
+
+// Config where the schema entry has its own separator override (overrides provider-level separator)
+const config_with_schema_separator_override = `
+locals {
+	settings = {}
+	config = {
+		configuration = {
+			convention 		= "default"
+			environment 		= ""
+			prefixes 			= []
+			suffixes			= []
+			name_precedence 	= ["abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"]
+			hash_length 		= 0
+			random_seed 		= 1337
+			separator 			= "-"
+			location 			= "westeurope"
+			lowercase 			= true
+		}
+		schema = {
+			azurerm_resource_group = {
+				resource_type 		= "azurerm_resource_group"
+				abbreviation 		= "rg"
+				min_length 			=  8
+				max_length			=  20
+				validation_regex 	= "^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"
+				configuration = {
+				  use_environment		= true
+				  use_lower_case 		= false
+				  use_separator 		= true
+				  separator 			= "."
+				  deny_double_hyphens = false
+				  name_precedence		= []
+				  hash_length			= 0
+				}
 			}
 		}
 		locations = {

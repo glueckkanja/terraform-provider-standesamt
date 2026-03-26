@@ -27,6 +27,7 @@ type JsonConfigurationSchema struct {
 	UseEnvironment    bool     `json:"useEnvironment"`
 	UseLowerCase      bool     `json:"useLowerCase"`
 	UseSeparator      bool     `json:"useSeparator"`
+	Separator         string   `json:"separator"`
 	DenyDoubleHyphens bool     `json:"denyDoubleHyphens"`
 	NamePrecedence    []string `json:"namePrecedence"`
 	HashLength        int      `json:"hashLength"`
@@ -63,12 +64,13 @@ type NamingSchema struct {
 }
 
 type Configuration struct {
-	UseEnvironment    types.Bool  `tfsdk:"use_environment"`
-	UseLowerCase      types.Bool  `tfsdk:"use_lower_case"`
-	UseSeparator      types.Bool  `tfsdk:"use_separator"`
-	DenyDoubleHyphens types.Bool  `tfsdk:"deny_double_hyphens"`
-	NamePrecedence    types.List  `tfsdk:"name_precedence"`
-	HashLength        types.Int32 `tfsdk:"hash_length"`
+	UseEnvironment    types.Bool   `tfsdk:"use_environment"`
+	UseLowerCase      types.Bool   `tfsdk:"use_lower_case"`
+	UseSeparator      types.Bool   `tfsdk:"use_separator"`
+	Separator         types.String `tfsdk:"separator"`
+	DenyDoubleHyphens types.Bool   `tfsdk:"deny_double_hyphens"`
+	NamePrecedence    types.List   `tfsdk:"name_precedence"`
+	HashLength        types.Int32  `tfsdk:"hash_length"`
 }
 
 func NewNamingSchemaMap(schemas []JsonNamingSchema) NamingSchemaMap {
@@ -94,6 +96,7 @@ func NewNamingSchemaMap(schemas []JsonNamingSchema) NamingSchemaMap {
 				UseEnvironment:    types.BoolValue(s.Configuration.UseEnvironment),
 				UseLowerCase:      types.BoolValue(s.Configuration.UseLowerCase),
 				UseSeparator:      types.BoolValue(s.Configuration.UseSeparator),
+				Separator:         types.StringValue(s.Configuration.Separator),
 				DenyDoubleHyphens: types.BoolValue(s.Configuration.DenyDoubleHyphens),
 				NamePrecedence:    types.ListValueMust(types.StringType, precedenceElements),
 				HashLength:        types.Int32Value(int32(s.Configuration.HashLength)),
@@ -121,6 +124,7 @@ func SchemaTypeAttributes() map[string]attr.Type {
 				"use_environment":     types.BoolType,
 				"use_lower_case":      types.BoolType,
 				"use_separator":       types.BoolType,
+				"separator":           types.StringType,
 				"deny_double_hyphens": types.BoolType,
 				"name_precedence":     types.ListType{ElemType: types.StringType},
 				"hash_length":         types.Int32Type,
