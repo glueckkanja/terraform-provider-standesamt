@@ -253,18 +253,13 @@ func (nb *nameBuilder) resolveEnvironment() {
 // resolveSeparator determines the separator to use.
 // Priority chain (highest to lowest):
 //  1. Per-call settings.separator
-//     2a. Schema-level separator from JSON library (injected into typeSchema.Configuration.Separator)
-//     2b. Provider-level separator (when useSeparator=true, no schema-level value)
+//  2. Provider-level separator (when useSeparator=true)
 //  3. Empty string (when useSeparator=false)
 func (nb *nameBuilder) resolveSeparator() {
 	if nb.buildNameSettings.Separator != "" {
 		nb.result.Separator = types.StringValue(nb.buildNameSettings.Separator)
 	} else if nb.typeSchema.Configuration.UseSeparator.ValueBool() {
-		if nb.typeSchema.Configuration.Separator != "" {
-			nb.result.Separator = types.StringValue(nb.typeSchema.Configuration.Separator)
-		} else {
-			nb.result.Separator = nb.model.Configuration.Separator
-		}
+		nb.result.Separator = nb.model.Configuration.Separator
 	} else {
 		nb.result.Separator = types.StringValue("")
 	}

@@ -70,9 +70,6 @@ type Configuration struct {
 	DenyDoubleHyphens types.Bool  `tfsdk:"deny_double_hyphens"`
 	NamePrecedence    types.List  `tfsdk:"name_precedence"`
 	HashLength        types.Int32 `tfsdk:"hash_length"`
-	// Separator is not in SchemaTypeAttributes — injected after HCL unmarshal from
-	// the JSON schema library so that existing inline schema objects are unaffected.
-	Separator string `tfsdk:"-"`
 }
 
 func NewNamingSchemaMap(schemas []JsonNamingSchema) NamingSchemaMap {

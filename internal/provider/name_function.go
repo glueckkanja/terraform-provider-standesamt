@@ -53,8 +53,10 @@ func (r *buildNameResultModel) SetConvention(override *s.BuildNameSettingsModel,
 
 var _ function.Function = &NameFunction{}
 
-type NameFunction struct {
-	provider *StandesamtProvider
+type NameFunction struct{}
+
+func NewNameFunction() function.Function {
+	return &NameFunction{}
 }
 
 func (f *NameFunction) Metadata(_ context.Context, _ function.MetadataRequest, resp *function.MetadataResponse) {
@@ -119,18 +121,10 @@ func (f *NameFunction) Definition(_ context.Context, _ function.DefinitionReques
 
 func (f *NameFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	// Parse and validate input arguments
-	model, nameType, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
+	model, _, buildNameSettings, name, typeSchema, err := parseArguments(ctx, req, resp)
 	if err != nil || resp.Error != nil {
 		// Error is already set in resp.Error by parseArguments, just return
 		return
-	}
-
-	// Inject the schema-level separator from the JSON library into typeSchema.
-	// The field has no tfsdk tag so it is not populated during HCL unmarshal.
-	if f.provider != nil && f.provider.config != nil {
-		if jsonSchema, ok := f.provider.config.NamingSchemas[nameType]; ok {
-			typeSchema.Configuration.Separator = jsonSchema.Configuration.Separator
-		}
 	}
 
 	// Build the resource name using the nameBuilder

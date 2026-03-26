@@ -48,9 +48,8 @@ func New(version string) func() provider.Provider {
 }
 
 type ProviderConfig struct {
-	SourceRef     fs.FS
-	ProviderData  providerData
-	NamingSchemas s.JsonNamingSchemaMap
+	SourceRef    fs.FS
+	ProviderData providerData
 }
 
 // StandesamtProvider is the provider implementation.
@@ -297,19 +296,9 @@ func (p *StandesamtProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	var namingSchemas s.JsonNamingSchemaMap
-	var schemaResult s.Result
-	if err := s.NewProcessorClient(f).Process(&schemaResult); err == nil {
-		namingSchemas = make(s.JsonNamingSchemaMap, len(schemaResult.NamingSchemas))
-		for _, ns := range schemaResult.NamingSchemas {
-			namingSchemas[ns.ResourceType] = ns
-		}
-	}
-
 	p.config = &ProviderConfig{
-		SourceRef:     f,
-		ProviderData:  data,
-		NamingSchemas: namingSchemas,
+		SourceRef:    f,
+		ProviderData: data,
 	}
 
 	resp.DataSourceData = p.config
@@ -340,7 +329,7 @@ func (p *StandesamtProvider) Resources(_ context.Context) []func() resource.Reso
 // Functions defines the functions implemented in the provider.
 func (p *StandesamtProvider) Functions(_ context.Context) []func() function.Function {
 	return []func() function.Function{
-		func() function.Function { return &NameFunction{provider: p} },
-		func() function.Function { return &ValidateFunction{provider: p} },
+		NewNameFunction,
+		NewValidateFunction,
 	}
 }
