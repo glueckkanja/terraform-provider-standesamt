@@ -38,7 +38,6 @@ func newUnmarshaler(data []byte, ext string) unmarshaler {
 	}
 }
 
-
 type processFunc func(result *Result, data unmarshaler) error
 
 // ProcessorClient is the client that is used to process the library files.
