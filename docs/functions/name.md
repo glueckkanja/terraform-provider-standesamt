@@ -96,6 +96,7 @@ Supported keys:
 | `hash_length` | `number` | Length of the random hash segment (0 = disabled). |
 | `random_seed` | `number` | Seed for the hash generator (for reproducible names). |
 | `lowercase` | `bool` | Convert the final name to lowercase. |
+| `uppercase` | `bool` | Convert the final name to uppercase. |
 
 Pass `{}` or `null` to use provider defaults for all settings.
 1. `name` (String) Name to parse

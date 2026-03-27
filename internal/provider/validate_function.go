@@ -69,7 +69,8 @@ func (f *ValidateFunction) Definition(_ context.Context, _ function.DefinitionRe
 					"| `name_precedence` | `list(string)` | Order of name segments. |\n" +
 					"| `hash_length` | `number` | Length of the random hash segment (0 = disabled). |\n" +
 					"| `random_seed` | `number` | Seed for the hash generator (for reproducible names). |\n" +
-					"| `lowercase` | `bool` | Convert the final name to lowercase. |\n\n" +
+					"| `lowercase` | `bool` | Convert the final name to lowercase. |\n" +
+					"| `uppercase` | `bool` | Convert the final name to uppercase. |\n\n" +
 					"Pass `{}` or `null` to use provider defaults for all settings.",
 			},
 			function.StringParameter{

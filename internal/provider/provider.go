@@ -67,6 +67,7 @@ type providerData struct {
 	Separator       types.String `tfsdk:"separator"`
 	HashLength      types.Int32  `tfsdk:"hash_length"`
 	Lowercase       types.Bool   `tfsdk:"lowercase"`
+	Uppercase       types.Bool   `tfsdk:"uppercase"`
 	RandomSeed      types.Int64  `tfsdk:"random_seed"`
 	SchemaReference types.Object `tfsdk:"schema_reference"`
 }
@@ -133,6 +134,11 @@ func (p *StandesamtProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 				Optional:            true,
 				Description:         "Control if the resulting name should be lower case. Default 'false'",
 				MarkdownDescription: "Control if the resulting name should be lower case. Default 'false'",
+			},
+			"uppercase": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Control if the resulting name should be upper case. Default 'false'",
+				MarkdownDescription: "Control if the resulting name should be upper case. Default 'false'",
 			},
 			"schema_reference": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
@@ -219,6 +225,10 @@ func (d *providerData) configProviderFromEnvironment() diag.Diagnostics {
 		d.Lowercase = types.BoolValue(val == "true")
 	}
 
+	if val := os.Getenv("SA_UPPERCASE"); val != "" && d.Uppercase.IsNull() {
+		d.Uppercase = types.BoolValue(val == "true")
+	}
+
 	return nil
 }
 
@@ -245,6 +255,10 @@ func (d *providerData) configProviderDefaults() {
 
 	if d.Lowercase.IsNull() {
 		d.Lowercase = types.BoolValue(false)
+	}
+
+	if d.Uppercase.IsNull() {
+		d.Uppercase = types.BoolValue(false)
 	}
 
 	if d.SchemaReference.IsNull() {

@@ -193,6 +193,125 @@ func TestNameFunction_SchemaSeparatorOverride(t *testing.T) {
 	})
 }
 
+// Config where the schema-level use_upper_case = true converts the result to uppercase.
+const config_with_schema_uppercase = `
+locals {
+	settings = {}
+	config = {
+		configuration = {
+			convention 		= "default"
+			environment 		= ""
+			prefixes 			= []
+			suffixes			= []
+			name_precedence 	= ["abbreviation", "name", "location"]
+			hash_length 		= 0
+			random_seed 		= 1337
+			separator 			= "-"
+			location 			= "westeurope"
+			lowercase 			= false
+			uppercase			= false
+		}
+		schema = {
+			azurerm_resource_group = {
+				resource_type 		= "azurerm_resource_group"
+				abbreviation 		= "rg"
+				min_length 			= 1
+				max_length			= 90
+				validation_regex 	= "^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"
+				configuration = {
+				  use_environment		= false
+				  use_lower_case 		= false
+				  use_upper_case		= true
+				  use_separator 		= true
+				  separator			= ""
+				  deny_double_hyphens = false
+				  name_precedence		= []
+				  hash_length			= 0
+				}
+			}
+		}
+		locations = {
+			"westeurope" = "we"
+		}
+	}
+}
+`
+
+// Config where both use_lower_case and use_upper_case are true — must produce an error.
+const config_with_casing_conflict = `
+locals {
+	settings = {}
+	config = {
+		configuration = {
+			convention 		= "default"
+			environment 		= ""
+			prefixes 			= []
+			suffixes			= []
+			name_precedence 	= ["abbreviation", "name", "location"]
+			hash_length 		= 0
+			random_seed 		= 1337
+			separator 			= "-"
+			location 			= "westeurope"
+			lowercase 			= false
+			uppercase			= false
+		}
+		schema = {
+			azurerm_resource_group = {
+				resource_type 		= "azurerm_resource_group"
+				abbreviation 		= "rg"
+				min_length 			= 1
+				max_length			= 90
+				validation_regex 	= "^[a-zA-Z0-9-._()]{0,89}[a-zA-Z0-9-_()]$"
+				configuration = {
+				  use_environment		= false
+				  use_lower_case 		= true
+				  use_upper_case		= true
+				  use_separator 		= true
+				  separator			= ""
+				  deny_double_hyphens = false
+				  name_precedence		= []
+				  hash_length			= 0
+				}
+			}
+		}
+		locations = {
+			"westeurope" = "we"
+		}
+	}
+}
+`
+
+func TestNameFunction_UpperCase(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", config_with_schema_uppercase, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "myapp")
+				}`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// use_upper_case = true → "RG-MYAPP-WE"
+					statecheck.ExpectKnownOutputValue("test", knownvalue.StringExact("RG-MYAPP-WE")),
+				},
+			},
+		},
+	})
+}
+
+func TestNameFunction_CasingConflictError(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf("%s %s", config_with_casing_conflict, `output "test" {
+					value = provider::standesamt::name(local.config, "azurerm_resource_group", local.settings, "myapp")
+				}`),
+				ExpectError: regexp.MustCompile(`lowercase and uppercase cannot both be true`),
+			},
+		},
+	})
+}
+
 func TestNameFunction_AzureCaf(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -289,6 +408,7 @@ random_seed = 1234
 separator = "_"
 location = "westeurope"
 lowercase = true
+uppercase			= false
 `)
 
 var remote_schema_config_with_null_values = fmt.Sprintf(schema_config, `
@@ -302,6 +422,7 @@ random_seed = null
 separator = null
 location = null
 lowercase = null
+uppercase			= false
 `)
 
 var remote_schema_config_with_partial_null_values = fmt.Sprintf(schema_config, `
@@ -315,6 +436,7 @@ random_seed = 1234
 separator = "_"
 location = "westeurope"
 lowercase = true
+uppercase			= false
 `)
 
 const default_config = `
@@ -334,6 +456,7 @@ locals {
 			separator 			= "-"
 			location 			= "westeurope"
 			lowercase 			= true
+			uppercase			= false
 		}
 		schema = {
 			azurerm_resource_group = {
@@ -345,6 +468,7 @@ locals {
 				configuration = {
 				  use_environment		= true
 				  use_lower_case 		= false
+				  use_upper_case		= false
 				  use_separator 		= true
 				  separator			= ""
 				  deny_double_hyphens = true
@@ -378,6 +502,7 @@ locals {
 			separator 			= "-"
 			location 			= "westeurope"
 			lowercase 			= true
+			uppercase			= false
 		}
 		schema = {
 			azurerm_storage_account = {
@@ -389,6 +514,7 @@ locals {
 				configuration = {
 				  use_environment		= false
 				  use_lower_case 		= true
+				  use_upper_case		= false
 				  use_separator 		= false
 				  separator			= ""
 				  deny_double_hyphens = false
@@ -421,6 +547,7 @@ locals {
 			separator 			= "-"
 			location 			= "westeurope"
 			lowercase 			= false
+			uppercase			= false
 		}
 		schema = {
 			azurerm_resource_group = {
@@ -432,6 +559,7 @@ locals {
 				configuration = {
 				  use_environment		= false
 				  use_lower_case 		= false
+				  use_upper_case		= false
 				  use_separator 		= true
 				  separator			= "_"
 				  deny_double_hyphens = false
@@ -463,6 +591,7 @@ locals {
 			separator 			= "-"
 			location 			= "westeurope"
 			lowercase 			= true
+			uppercase			= false
 		}
 		schema = {}
 		locations = {

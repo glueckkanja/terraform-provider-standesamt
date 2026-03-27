@@ -58,6 +58,7 @@ output "resource_group_name" {
 - `random_seed` (Number) A random seed used by the random number generator. This is used to generate a random name for the naming schema. The default value is 1337. Make sure to update this value to avoid collisions for globally unique names. Will override the random seed defined in the provider settings.
 - `separator` (String) The separator to use for generating the resulting name. Will override the separator defined in the provider settings.
 - `suffixes` (List of String) A list of strings used as suffixes for the resulting name. Each suffix will be used in order and separated by the separator. Default '[]'
+- `uppercase` (Boolean) Control if the resulting name should be upper case. Overrides all schema configurations. Overrides the default uppercase setting defined in the provider settings.
 
 ### Read-Only
 
@@ -78,6 +79,7 @@ Read-Only:
 - `random_seed` (Number)
 - `separator` (String)
 - `suffixes` (List of String)
+- `uppercase` (Boolean)
 
 
 <a id="nestedatt--schema"></a>
@@ -104,3 +106,4 @@ Read-Only:
 - `use_environment` (Boolean)
 - `use_lower_case` (Boolean)
 - `use_separator` (Boolean)
+- `use_upper_case` (Boolean)
