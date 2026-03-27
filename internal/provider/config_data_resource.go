@@ -36,6 +36,7 @@ type configurationModel struct {
 	RandomSeed  types.Int64  `tfsdk:"random_seed"`
 	HashLength  types.Int32  `tfsdk:"hash_length"`
 	Lowercase   types.Bool   `tfsdk:"lowercase"`
+	Uppercase   types.Bool   `tfsdk:"uppercase"`
 	Prefixes    types.List   `tfsdk:"prefixes"`
 	Suffixes    types.List   `tfsdk:"suffixes"`
 	Location    types.String `tfsdk:"location"`
@@ -49,6 +50,7 @@ type schemaDataSourceModel struct {
 	RandomSeed    types.Int64  `tfsdk:"random_seed"`
 	HashLength    types.Int32  `tfsdk:"hash_length"`
 	Lowercase     types.Bool   `tfsdk:"lowercase"`
+	Uppercase     types.Bool   `tfsdk:"uppercase"`
 	Prefixes      types.List   `tfsdk:"prefixes"`
 	Suffixes      types.List   `tfsdk:"suffixes"`
 	Schema        types.Map    `tfsdk:"schema"`
@@ -68,6 +70,7 @@ func configurationTypeAttributes() map[string]attr.Type {
 		"random_seed": types.Int64Type,
 		"hash_length": types.Int32Type,
 		"lowercase":   types.BoolType,
+		"uppercase":   types.BoolType,
 		"prefixes":    types.ListType{ElemType: types.StringType},
 		"suffixes":    types.ListType{ElemType: types.StringType},
 		"location":    types.StringType, //TODO
@@ -113,6 +116,11 @@ func (d *SchemaDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Optional:            true,
 				Description:         "Control if the resulting name should be lower case. Overrides all schema configurations. Overrides the default lowercase setting defined in the provider settings.",
 				MarkdownDescription: "Control if the resulting name should be lower case. Overrides all schema configurations. Overrides the default lowercase setting defined in the provider settings.",
+			},
+			"uppercase": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Control if the resulting name should be upper case. Overrides all schema configurations. Overrides the default uppercase setting defined in the provider settings.",
+				MarkdownDescription: "Control if the resulting name should be upper case. Overrides all schema configurations. Overrides the default uppercase setting defined in the provider settings.",
 			},
 			"prefixes": schema.ListAttribute{
 				Optional:            true,
@@ -224,6 +232,11 @@ func (d *SchemaDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	configuration.Lowercase = data.Lowercase
 	if configuration.Lowercase.IsNull() {
 		configuration.Lowercase = d.providerSettings.Lowercase
+	}
+
+	configuration.Uppercase = data.Uppercase
+	if configuration.Uppercase.IsNull() {
+		configuration.Uppercase = d.providerSettings.Uppercase
 	}
 
 	configuration.Environment = data.Environment

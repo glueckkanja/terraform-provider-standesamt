@@ -107,7 +107,8 @@ func (f *NameFunction) Definition(_ context.Context, _ function.DefinitionReques
 					"| `name_precedence` | `list(string)` | Order of name segments. |\n" +
 					"| `hash_length` | `number` | Length of the random hash segment (0 = disabled). |\n" +
 					"| `random_seed` | `number` | Seed for the hash generator (for reproducible names). |\n" +
-					"| `lowercase` | `bool` | Convert the final name to lowercase. |\n\n" +
+					"| `lowercase` | `bool` | Convert the final name to lowercase. |\n" +
+					"| `uppercase` | `bool` | Convert the final name to uppercase. |\n\n" +
 					"Pass `{}` or `null` to use provider defaults for all settings.",
 			},
 			function.StringParameter{
@@ -163,4 +164,12 @@ func toLower(s types.String) types.String {
 	}
 
 	return types.StringValue(strings.ToLower(s.ValueString()))
+}
+
+func toUpper(s types.String) types.String {
+	if s.IsNull() || s.IsUnknown() {
+		return s
+	}
+
+	return types.StringValue(strings.ToUpper(s.ValueString()))
 }

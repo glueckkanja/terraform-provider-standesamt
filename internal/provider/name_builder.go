@@ -111,6 +111,10 @@ func parseSettingsFromDynamic(settingsDynamic types.Dynamic) (*s.BuildNameSettin
 		settings.Lowercase = v.ValueBool()
 	}
 
+	if v, ok := attrs["uppercase"].(types.Bool); ok && !v.IsNull() && !v.IsUnknown() {
+		settings.Uppercase = v.ValueBool()
+	}
+
 	// Handle list/tuple attributes - HCL uses tuples for literal lists
 	if v, ok := attrs["prefixes"]; ok {
 		settings.Prefixes = extractStringSlice(v)
@@ -375,10 +379,25 @@ func (nb *nameBuilder) buildNameComponents(name types.String) {
 	nb.result.Name = types.StringValue(strings.Join(calculatedContent, nb.result.Separator.ValueString()))
 }
 
-// applyLowercase converts the name to lowercase if needed
-func (nb *nameBuilder) applyLowercase() {
-	if nb.typeSchema.Configuration.UseLowerCase.ValueBool() || nb.model.Configuration.Lowercase.ValueBool() || nb.buildNameSettings.Lowercase {
+// applyCasing converts the name to lower or upper case if needed.
+// Returns an error if both lowercase and uppercase are simultaneously requested.
+func (nb *nameBuilder) applyCasing(resp *function.RunResponse) {
+	wantLower := nb.typeSchema.Configuration.UseLowerCase.ValueBool() ||
+		nb.model.Configuration.Lowercase.ValueBool() ||
+		nb.buildNameSettings.Lowercase
+	wantUpper := nb.typeSchema.Configuration.UseUpperCase.ValueBool() ||
+		nb.model.Configuration.Uppercase.ValueBool() ||
+		nb.buildNameSettings.Uppercase
+
+	if wantLower && wantUpper {
+		resp.Error = function.ConcatFuncErrors(resp.Error,
+			function.NewFuncError("Invalid configuration: lowercase and uppercase cannot both be true"))
+		return
+	}
+	if wantLower {
 		nb.result.Name = toLower(nb.result.Name)
+	} else if wantUpper {
+		nb.result.Name = toUpper(nb.result.Name)
 	}
 }
 
@@ -401,7 +420,7 @@ func (nb *nameBuilder) buildName(name types.String, resp *function.RunResponse) 
 		nb.result.Name = name
 	}
 
-	nb.applyLowercase()
+	nb.applyCasing(resp)
 	return nb.result.Name
 }
 

@@ -9,6 +9,7 @@ import (
 	s "terraform-provider-standesamt/internal/schema"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -191,6 +192,75 @@ func TestResolveSeparator(t *testing.T) {
 			nb := makeTestNameBuilder(tt.perCall, tt.schema, tt.provider, tt.useSeparator)
 			nb.resolveSeparator()
 			assert.Equal(t, tt.want, nb.result.Separator.ValueString())
+		})
+	}
+}
+
+func makeTestBuilderForCasing(useLower, useUpper bool) (*nameBuilder, *function.RunResponse) {
+	resp := &function.RunResponse{}
+	nb := &nameBuilder{
+		model: &configurationsModel{
+			Configuration: configurationModel{
+				Lowercase: types.BoolValue(false),
+				Uppercase: types.BoolValue(false),
+			},
+		},
+		typeSchema: &s.NamingSchema{
+			Configuration: s.Configuration{
+				UseLowerCase: types.BoolValue(useLower),
+				UseUpperCase: types.BoolValue(useUpper),
+			},
+		},
+		buildNameSettings: &s.BuildNameSettingsModel{},
+		result: &buildNameResultModel{
+			Name: types.StringValue("RG-MyApp-WE"),
+		},
+	}
+	return nb, resp
+}
+
+func TestApplyCasing(t *testing.T) {
+	tests := []struct {
+		name      string
+		useLower  bool
+		useUpper  bool
+		input     string
+		want      string
+		wantError bool
+	}{
+		{
+			name:     "lowercase applied",
+			useLower: true, useUpper: false,
+			input: "RG-MyApp-WE", want: "rg-myapp-we",
+		},
+		{
+			name:     "uppercase applied",
+			useLower: false, useUpper: true,
+			input: "rg-myapp-we", want: "RG-MYAPP-WE",
+		},
+		{
+			name:     "no casing change",
+			useLower: false, useUpper: false,
+			input: "rg-MyApp-we", want: "rg-MyApp-we",
+		},
+		{
+			name:     "conflict returns error",
+			useLower: true, useUpper: true,
+			input: "rg-myapp-we", wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nb, resp := makeTestBuilderForCasing(tt.useLower, tt.useUpper)
+			nb.result.Name = types.StringValue(tt.input)
+			nb.applyCasing(resp)
+			if tt.wantError {
+				assert.NotNil(t, resp.Error)
+			} else {
+				assert.Nil(t, resp.Error)
+				assert.Equal(t, tt.want, nb.result.Name.ValueString())
+			}
 		})
 	}
 }

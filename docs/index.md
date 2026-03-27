@@ -79,6 +79,7 @@ provider "standesamt" {
 
     The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library). (see [below for nested schema](#nestedatt--schema_reference))
 - `separator` (String) The separator to use for generating the resulting name. Default '-'
+- `uppercase` (Boolean) Control if the resulting name should be upper case. Default 'false'
 
 <a id="nestedatt--schema_reference"></a>
 ### Nested Schema for `schema_reference`
