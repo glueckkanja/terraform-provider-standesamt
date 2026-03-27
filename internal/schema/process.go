@@ -4,9 +4,7 @@
 package schema
 
 import (
-	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"path/filepath"
 	"slices"
@@ -40,25 +38,6 @@ func newUnmarshaler(data []byte, ext string) unmarshaler {
 	}
 }
 
-func (u unmarshaler) unmarshal(dst any) error {
-	switch strings.ToLower(u.ext) {
-	case ".json":
-		return unmarshalJSON(u.d, dst)
-	case ".yaml":
-		return unmarshalYAML(u.d, dst)
-	case ".yml":
-		return unmarshalYAML(u.d, dst)
-	}
-	return fmt.Errorf("unmarshaler.unmarshal: unsupported extension: %s", u.ext)
-}
-
-func unmarshalJSON(data []byte, dst any) error {
-	return json.Unmarshal(data, dst)
-}
-
-func unmarshalYAML(data []byte, dst any) error {
-	return yaml.Unmarshal(data, dst)
-}
 
 type processFunc func(result *Result, data unmarshaler) error
 
@@ -114,21 +93,20 @@ func identifyFile(res *Result, file fs.File, name string) error {
 }
 
 func processNamingSchema(res *Result, unmar unmarshaler) error {
-	schemas := new([]JsonNamingSchema)
-	if err := unmar.unmarshal(schemas); err != nil {
-		return fmt.Errorf("processNamingSchema: error unmarshaling: %w", err)
+	schemas, err := loadNamingSchemas(unmar.d)
+	if err != nil {
+		return fmt.Errorf("processNamingSchema: %w", err)
 	}
-
-	res.NamingSchemas = *schemas
+	res.NamingSchemas = schemas
 	return nil
 }
 
 func processLocationsMapSchema(res *Result, unmar unmarshaler) error {
-	lm := new(LocationsMapSchema)
-	if err := unmar.unmarshal(lm); err != nil {
-		return fmt.Errorf("processLocationsMapSchema: error unmarshaling: %w", err)
+	lm, err := loadLocations(unmar.d)
+	if err != nil {
+		return fmt.Errorf("processLocationsMapSchema: %w", err)
 	}
-	res.Locations = *lm
+	res.Locations = lm
 	return nil
 }
 

@@ -15,12 +15,18 @@ type LocationsMapSchema map[string]string
 var DefaultNamePrecedence = [...]string{"abbreviation", "prefixes", "name", "location", "environment", "hash", "suffixes"}
 
 type JsonNamingSchema struct {
+	// v1 fields — always present
 	ResourceType    string                  `json:"resourceType"`
 	Abbreviation    string                  `json:"abbreviation"`
 	MinLength       int                     `json:"minLength"`
 	MaxLength       int                     `json:"maxLength"`
 	ValidationRegex string                  `json:"validationRegex"`
 	Configuration   JsonConfigurationSchema `json:"configuration"`
+
+	// v2+ fields — zero value means "not set" (omitempty on serialisation)
+	Deprecated   bool     `json:"deprecated,omitempty"`
+	DeprecatedBy string   `json:"deprecatedBy,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
 
 type JsonConfigurationSchema struct {
