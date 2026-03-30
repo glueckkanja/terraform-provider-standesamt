@@ -69,7 +69,7 @@ func TestProviderDefaults(t *testing.T) {
 	assert.Equal(t, int64(1337), data.RandomSeed.ValueInt64())
 	assert.Equal(t, int32(0), data.HashLength.ValueInt32())
 	assert.Equal(t, false, data.Lowercase.ValueBool())
-	assert.Equal(t, "2025.04", sourceRef.Ref.ValueString())
+	assert.Equal(t, "2026.01", sourceRef.Ref.ValueString())
 	assert.Equal(t, "azure/caf", sourceRef.Path.ValueString())
 	assert.Equal(t, "", sourceRef.CustomUrl.ValueString())
 
