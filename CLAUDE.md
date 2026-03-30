@@ -89,7 +89,7 @@ provider_installation {
 Docs are auto-generated — do not edit `docs/` manually.
 
 - Examples live in `examples/functions/<function-name>/function.tf`
-- Guides go in `templates/guides/` (copied to `docs/` by tfplugindocs)
+- Guides go in `templates/guides/` — tfplugindocs copies them to `docs/guides/` on each run; **do not** place guides directly in `docs/guides/` as they will be deleted by the next `make generate`
 - Every schema attribute/parameter needs a `MarkdownDescription` set
 
 ```bash

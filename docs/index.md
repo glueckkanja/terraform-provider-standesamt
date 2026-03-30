@@ -65,19 +65,20 @@ provider "standesamt" {
 - `hash_length` (Number) Default hash length. Overrides all schema configurations.
 - `lowercase` (Boolean) Control if the resulting name should be lower case. Default 'false'
 - `random_seed` (Number) A random seed used by the random number generator. This is used to generate a random name for the naming schema. The default value is 1337. Make sure to update this value to avoid collisions for globally unique names.
-- `schema_reference` (Attributes) A reference to a Naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2025.04`), or a `custom_url` to be supplied to go-getter.
+- `schema_reference` (Attributes) A reference to a Naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2026.01`), or a `custom_url` to be supplied to go-getter.
     If this value is not specified, the default value will be used, which is:
 
     ```terraform
 
     schema_reference = {
       path = "azure/caf",
-      ref = "2025.04"
+      ref = "2026.01"
     }
 
     ```
 
-    The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library). (see [below for nested schema](#nestedatt--schema_reference))
+    The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library).
+    See the [Schema v2 Format](../guides/schema-v2) guide for details on the versioned schema file format. (see [below for nested schema](#nestedatt--schema_reference))
 - `separator` (String) The separator to use for generating the resulting name. Default '-'
 - `uppercase` (Boolean) Control if the resulting name should be upper case. Default 'false'
 
