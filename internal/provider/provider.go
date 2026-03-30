@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	standesamtLibRef  = "2025.04"
+	standesamtLibRef  = "2026.01"
 	standesamtLibPath = "azure/caf"
 )
 
@@ -172,8 +172,8 @@ func (p *StandesamtProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 					},
 				},
 				Optional:            true,
-				Description:         "A reference to a naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2025.04`), or a `custom_url` to be supplied to go-getter.\n    If this value is not specified, the default value will be used, which is:\n\n    ```terraform\n\n    schema_reference = {\n      path = \"azure/caf\",\n      ref = \"2025.04\"\n    }\n\n    ```\n\n    The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library).",
-				MarkdownDescription: "A reference to a Naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2025.04`), or a `custom_url` to be supplied to go-getter.\n    If this value is not specified, the default value will be used, which is:\n\n    ```terraform\n\n    schema_reference = {\n      path = \"azure/caf\",\n      ref = \"2025.04\"\n    }\n\n    ```\n\n    The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library).",
+				Description:         "A reference to a naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2026.01`), or a `custom_url` to be supplied to go-getter.\n    If this value is not specified, the default value will be used, which is:\n\n    ```terraform\n\n    schema_reference = {\n      path = \"azure/caf\",\n      ref = \"2026.01\"\n    }\n\n    ```\n\n    The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library).\n    See the [Schema v2 Format](../guides/schema-v2) guide for details on the versioned schema file format.",
+				MarkdownDescription: "A reference to a Naming schema library to use. The reference should either contain a `path` (e.g. `azure/caf`) and the `ref` (e.g. `2026.01`), or a `custom_url` to be supplied to go-getter.\n    If this value is not specified, the default value will be used, which is:\n\n    ```terraform\n\n    schema_reference = {\n      path = \"azure/caf\",\n      ref = \"2026.01\"\n    }\n\n    ```\n\n    The reference is using the [default standesamt library](https://github.com/glueckkanja/standesamt-schema-library).\n    See the [Schema v2 Format](../guides/schema-v2) guide for details on the versioned schema file format.",
 			},
 		},
 	}
