@@ -4,8 +4,6 @@ The standesamt provider is a provider for Terraform that allows you to create na
 
 ## Get started with standesamt
 
-ADD REFERENCE TO A DOCUMENTATION?
-
 Also, there is a rich library of [examples](https://github.com/glueckkanja/terraform-provider-standesamt/tree/main/examples) to help you get started.
 
 ## Usage Example
