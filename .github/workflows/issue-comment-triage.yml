@@ -9,6 +9,9 @@ on:
 jobs:
   issue_comment_triage:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write # Required to remove labels from issues and pull requests
+      pull-requests: write # Required to remove labels from issues and pull requests
     env:
       # issue_comment events are triggered by comments on issues and pull requests. Checking the
       # value of github.event.issue.pull_request tells us whether the issue is an issue or is
