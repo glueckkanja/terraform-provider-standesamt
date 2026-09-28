@@ -8,10 +8,14 @@ updates:
     schedule:
       # Check for updates to Go modules every weekday
       interval: "daily"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "gomod"
     directory: "/tools"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -19,3 +23,5 @@ updates:
     # TODO: Dependabot only updates hashicorp GHAs in the template repository, the following lines can be removed for consumers of this template
     allow:
       - dependency-name: "hashicorp/*"
+    cooldown:
+      default-days: 7
