@@ -3,11 +3,18 @@
 name: Issue Comment Triage
 
 on:
-  issue_comment:
+  issue_comment: # zizmor: ignore[dangerous-triggers] -- no checkout or code execution; only removes a label via gh, untrusted input passed through env
     types: [created]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
   issue_comment_triage:
+    name: Remove waiting-response label
     runs-on: ubuntu-latest
     permissions:
       issues: write # Required to remove labels from issues and pull requests
@@ -21,6 +28,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: 'Remove waiting-response on comment'
-        run: gh ${COMMAND} edit ${GITHUB_EVENT_ISSUE_HTML_URL} --remove-label waiting-response
+        run: gh "${COMMAND}" edit "${GITHUB_EVENT_ISSUE_HTML_URL}" --remove-label waiting-response
         env:
           GITHUB_EVENT_ISSUE_HTML_URL: ${{ github.event.issue.html_url }}
