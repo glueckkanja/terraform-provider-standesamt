@@ -6,8 +6,15 @@ on:
   schedule:
     - cron: '43 20 * * *'
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   lock:
+    name: Lock inactive threads
     runs-on: ubuntu-latest
     permissions:
       issues: write # Required to lock issues and pull requests

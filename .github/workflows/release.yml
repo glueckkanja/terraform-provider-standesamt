@@ -8,14 +8,21 @@ on:
     tags:
       - 'v*'
 
-# Releases need permissions to read and write the repository contents.
-# GitHub considers creating releases and uploading assets as writing contents.
-permissions:
-  contents: write
+permissions: {}
+
+# Never cancel a release mid-publish; serialize runs per tag.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   goreleaser:
+    name: GoReleaser
     runs-on: ubuntu-latest
+    # Gate signing secrets behind a deployment environment (configure protection rules in repo Settings).
+    environment: release
+    permissions:
+      contents: write # Required to create the GitHub release and upload assets
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

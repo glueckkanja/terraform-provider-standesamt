@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Ensure project builds before running testing matrix
   build:
@@ -39,6 +43,7 @@ jobs:
           version: latest
 
   generate:
+    name: generate # must match the required status check in the main ruleset
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
