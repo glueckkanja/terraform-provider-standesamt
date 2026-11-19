@@ -21,6 +21,12 @@ var supportedFileTypes = []string{".json"}
 type Result struct {
 	NamingSchemas []JsonNamingSchema
 	Locations     LocationsMapSchema
+
+	// NamingDuplicates and LocationDuplicates describe entries that occur more
+	// than once within a single schema file. They are informational: the last
+	// entry still wins, so generated names do not change.
+	NamingDuplicates   []string
+	LocationDuplicates []string
 }
 
 type unmarshaler struct {
@@ -97,6 +103,7 @@ func processNamingSchema(res *Result, unmar unmarshaler) error {
 		return fmt.Errorf("processNamingSchema: %w", err)
 	}
 	res.NamingSchemas = schemas
+	res.NamingDuplicates = prefixMessages(schemaNamingFileName, findDuplicateResourceTypes(schemas))
 	return nil
 }
 
@@ -105,8 +112,28 @@ func processLocationsMapSchema(res *Result, unmar unmarshaler) error {
 	if err != nil {
 		return fmt.Errorf("processLocationsMapSchema: %w", err)
 	}
+	raw, err := locationsRaw(unmar.d)
+	if err != nil {
+		return fmt.Errorf("processLocationsMapSchema: %w", err)
+	}
+	dups, err := findDuplicateObjectKeys(raw, "location")
+	if err != nil {
+		return fmt.Errorf("processLocationsMapSchema: %w", err)
+	}
 	res.Locations = lm
+	res.LocationDuplicates = prefixMessages(schemaLocationFileName, dups)
 	return nil
+}
+
+func prefixMessages(prefix string, messages []string) []string {
+	if len(messages) == 0 {
+		return nil
+	}
+	out := make([]string, len(messages))
+	for i, m := range messages {
+		out[i] = prefix + ": " + m
+	}
+	return out
 }
 
 func readAndProcessFile(res *Result, file fs.File, processFn processFunc) error {

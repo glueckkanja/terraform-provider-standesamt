@@ -194,6 +194,7 @@ func (d *SchemaDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		resp.Diagnostics.AddError("source_reference", err.Error())
 		return
 	}
+	addDuplicateWarnings(&resp.Diagnostics, "Duplicate entry in naming schema library", result.NamingDuplicates)
 
 	configuration.Convention = data.Convention
 	if configuration.Convention.IsNull() {

@@ -99,6 +99,31 @@ func loadNamingSchemas(data []byte) ([]JsonNamingSchema, error) {
 	}
 }
 
+// locationsRaw returns the raw JSON object that holds the location map:
+// the whole document for v1, or the "locations" field of the v2 envelope.
+// It is used for duplicate-key detection, which needs the undecoded bytes.
+func locationsRaw(data []byte) (json.RawMessage, error) {
+	version, err := detectVersion(data)
+	if err != nil {
+		return nil, fmt.Errorf("locationsRaw: %w", err)
+	}
+
+	switch version {
+	case 1:
+		return data, nil
+	case 2:
+		var envelope struct {
+			Locations json.RawMessage `json:"locations"`
+		}
+		if err := json.Unmarshal(data, &envelope); err != nil {
+			return nil, fmt.Errorf("locationsRaw: v2: failed to unmarshal: %w", err)
+		}
+		return envelope.Locations, nil
+	default:
+		return nil, fmt.Errorf("locationsRaw: schema version %d is not supported", version)
+	}
+}
+
 // loadLocations is the version-dispatching entry point for location schema files.
 //
 // v1 (raw JSON object / flat map) → unmarshalled directly as LocationsMapSchema
