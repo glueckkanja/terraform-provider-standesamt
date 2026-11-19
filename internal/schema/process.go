@@ -22,9 +22,7 @@ type Result struct {
 	NamingSchemas []JsonNamingSchema
 	Locations     LocationsMapSchema
 
-	// NamingDuplicates and LocationDuplicates describe entries that occur more
-	// than once within a single schema file. They are informational: the last
-	// entry still wins, so generated names do not change.
+	// Duplicate entries per file; informational only, the last entry wins.
 	NamingDuplicates   []string
 	LocationDuplicates []string
 }

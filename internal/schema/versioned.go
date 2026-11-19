@@ -99,9 +99,7 @@ func loadNamingSchemas(data []byte) ([]JsonNamingSchema, error) {
 	}
 }
 
-// locationsRaw returns the raw JSON object that holds the location map:
-// the whole document for v1, or the "locations" field of the v2 envelope.
-// It is used for duplicate-key detection, which needs the undecoded bytes.
+// locationsRaw returns the undecoded location map (v1: whole document, v2: "locations").
 func locationsRaw(data []byte) (json.RawMessage, error) {
 	version, err := detectVersion(data)
 	if err != nil {

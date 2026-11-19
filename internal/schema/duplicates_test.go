@@ -75,7 +75,6 @@ func TestFindDuplicateObjectKeys_Duplicate(t *testing.T) {
 }
 
 func TestFindDuplicateObjectKeys_NestedValuesAreSkipped(t *testing.T) {
-	// Duplicate keys inside nested values are not top-level duplicates.
 	msgs, err := findDuplicateObjectKeys([]byte(`{"a":{"x":1,"x":2},"b":[1,2]}`), "key")
 	require.NoError(t, err)
 	assert.Nil(t, msgs)
@@ -92,7 +91,6 @@ func TestFindDuplicateObjectKeys_Errors(t *testing.T) {
 // ── locationsRaw ─────────────────────────────────────────────────────────────
 
 func TestLocationsRaw_V2IgnoresEnvelopeKeys(t *testing.T) {
-	// "version" is duplicated at envelope level; only the locations object is returned.
 	raw, err := locationsRaw([]byte(`{"version":2,"version":2,"locations":{"eastus":"eus","eastus":"eus1"}}`))
 	require.NoError(t, err)
 
@@ -126,7 +124,6 @@ func TestProcess_ReportsDuplicatesAndKeepsLastWins(t *testing.T) {
 	require.Len(t, res.LocationDuplicates, 1)
 	assert.Contains(t, res.LocationDuplicates[0], "schema.locations.json: ")
 
-	// Behaviour is unchanged: the last entry / value still wins.
 	m := NewNamingSchemaMap(res.NamingSchemas)
 	assert.Equal(t, `["name","abbreviation"]`, m["azurerm_resource_group"].Configuration.NamePrecedence.String())
 	assert.Equal(t, "eus1", res.Locations["eastus"])

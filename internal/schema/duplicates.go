@@ -12,10 +12,7 @@ import (
 	"strings"
 )
 
-// findDuplicateResourceTypes reports every resourceType that occurs more than
-// once in a single naming schema file. The returned messages are sorted by
-// resource type. Detection is informational only: the last entry still wins
-// (see NewNamingSchemaMap), which keeps generated names stable.
+// findDuplicateResourceTypes reports resourceTypes listed more than once (the last entry wins).
 func findDuplicateResourceTypes(schemas []JsonNamingSchema) []string {
 	indices := make(map[string][]int)
 	for i, s := range schemas {
@@ -62,10 +59,7 @@ func findDuplicateResourceTypes(schemas []JsonNamingSchema) []string {
 	return messages
 }
 
-// findDuplicateObjectKeys reports every key that occurs more than once at the
-// top level of the JSON object in raw. encoding/json silently keeps the last
-// value for a duplicate key; this makes that visible. The returned messages
-// are sorted by key.
+// findDuplicateObjectKeys reports repeated top-level keys, which encoding/json silently drops.
 func findDuplicateObjectKeys(raw []byte, label string) ([]string, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 
