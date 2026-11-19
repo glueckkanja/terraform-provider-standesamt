@@ -156,7 +156,7 @@ schema version 3 is not supported by this provider (max supported: 2); upgrade t
 ## Migrating from v1 to v2
 
 The helper script [`scripts/migrate-schema-v1-to-v2.sh`](https://github.com/glueckkanja/terraform-provider-standesamt/blob/main/scripts/migrate-schema-v1-to-v2.sh)
-lives in **this provider's repository** (not in the schema library repository) and automates the conversion.
+in this provider's repository automates the conversion.
 Run it from a checkout of this repository against your schema library directory:
 
 ```shell
