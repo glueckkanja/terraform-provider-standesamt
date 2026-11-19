@@ -191,7 +191,8 @@ will replace the affected resources on the next apply.
 ## Migration Script
 
 The script `scripts/migrate-schema-v1-to-v2.sh` converts both schema files in a given library
-directory in place. It requires [jq](https://jqlang.org).
+directory in place. It requires [Go](https://go.dev/dl/) and uses the provider's own parsing, so the
+migrated files decode exactly like the originals.
 
 ```shell
 # Usage
@@ -204,15 +205,12 @@ scripts/migrate-schema-v1-to-v2.sh azure/caf
 The script will:
 
 1. Read `<path>/schema.naming.json` and `<path>/schema.locations.json` (at least one must exist)
-2. Skip files that are already v2, and skip files with a newer version (v3+) with a warning
-3. Wrap v1 files in the v2 envelope, adding `"version": 2` and `"generatedAt"`
+2. Skip files that are already v2 or use a newer version (v3+)
+3. Wrap v1 files in the v2 envelope, adding `"version": 2` and `"generatedAt"`; the existing
+   entries are copied unchanged, including any duplicates
 4. Write the result back in-place (pretty-printed, 2-space indentation)
 5. Print a summary of what was changed
 
 A file that is not valid JSON, or whose payload has the wrong type, is reported as an error and
 left unchanged; the script then exits with a non-zero status. Running the script again on migrated
 files is safe and changes nothing.
-
-If `schema.locations.json` contains the same location key more than once, the migrated file keeps
-only the last value. That is the value the provider already uses, so names do not change, but the
-duplicate warning described above no longer appears.
