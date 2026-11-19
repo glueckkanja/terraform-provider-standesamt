@@ -57,47 +57,73 @@ func TestFindDuplicateResourceTypes_SortedOutput(t *testing.T) {
 	assert.Contains(t, msgs[1], `"zeta"`)
 }
 
-// ── findDuplicateObjectKeys ─────────────────────────────────────────────────
+// ── objectPairs / duplicatePairs ────────────────────────────────────────────
 
-func TestFindDuplicateObjectKeys_None(t *testing.T) {
-	msgs, err := findDuplicateObjectKeys([]byte(`{"eastus":"eus","westeurope":"weu"}`), "location")
+func dupsOf(t *testing.T, raw string, label string) []string {
+	t.Helper()
+	pairs, err := objectPairs([]byte(raw))
 	require.NoError(t, err)
-	assert.Nil(t, msgs)
+	return duplicatePairs(pairs, label)
 }
 
-func TestFindDuplicateObjectKeys_Duplicate(t *testing.T) {
-	msgs, err := findDuplicateObjectKeys([]byte(`{"eastus":"eus","westeurope":"weu","eastus":"eus1"}`), "location")
-	require.NoError(t, err)
+func TestDuplicatePairs_None(t *testing.T) {
+	assert.Nil(t, dupsOf(t, `{"eastus":"eus","westeurope":"weu"}`, "location"))
+}
+
+func TestDuplicatePairs_Duplicate(t *testing.T) {
+	msgs := dupsOf(t, `{"eastus":"eus","westeurope":"weu","eastus":"eus1"}`, "location")
 	require.Len(t, msgs, 1)
 	assert.Equal(t,
 		`location "eastus" is defined 2 times (values "eus", "eus1"); the last value ("eus1") is used`,
 		msgs[0])
 }
 
-func TestFindDuplicateObjectKeys_NestedValuesAreSkipped(t *testing.T) {
-	msgs, err := findDuplicateObjectKeys([]byte(`{"a":{"x":1,"x":2},"b":[1,2]}`), "key")
-	require.NoError(t, err)
-	assert.Nil(t, msgs)
+func TestDuplicatePairs_NestedValuesAreSkipped(t *testing.T) {
+	assert.Nil(t, dupsOf(t, `{"a":{"x":1,"x":2},"b":[1,2]}`, "key"))
 }
 
-func TestFindDuplicateObjectKeys_Errors(t *testing.T) {
-	_, err := findDuplicateObjectKeys([]byte(`not json`), "location")
+func TestObjectPairs_Errors(t *testing.T) {
+	_, err := objectPairs([]byte(`not json`))
 	assert.Error(t, err)
 
-	_, err = findDuplicateObjectKeys([]byte(`["eastus"]`), "location")
+	_, err = objectPairs([]byte(`["eastus"]`))
 	assert.Error(t, err)
 }
 
-// ── locationsRaw ─────────────────────────────────────────────────────────────
+// ── locationPairs ────────────────────────────────────────────────────────────
 
-func TestLocationsRaw_V2IgnoresEnvelopeKeys(t *testing.T) {
-	raw, err := locationsRaw([]byte(`{"version":2,"version":2,"locations":{"eastus":"eus","eastus":"eus1"}}`))
-	require.NoError(t, err)
+func TestLocationPairs(t *testing.T) {
+	tests := []struct {
+		name string
+		doc  string
+		dups []string // keys expected to be reported
+	}{
+		{"v1 duplicate", `{"eastus":"a","eastus":"b"}`, []string{"eastus"}},
+		{"v2 duplicate", `{"version":2,"locations":{"eastus":"a","eastus":"b"}}`, []string{"eastus"}},
+		{"v2 envelope keys ignored", `{"version":2,"version":2,"locations":{"eastus":"a"}}`, nil},
+		{"v2 locations missing", `{"version":2}`, nil},
+		{"v2 locations null", `{"version":2,"locations":null}`, nil},
+		{"v2 repeated locations merge", `{"version":2,"locations":{"eastus":"a","eastus":"b"},"locations":{"westus":"w"}}`, []string{"eastus"}},
+		{"v2 repeated locations across objects", `{"version":2,"locations":{"eastus":"a"},"locations":{"eastus":"b"}}`, []string{"eastus"}},
+		{"v2 null resets earlier objects", `{"version":2,"locations":{"eastus":"a"},"locations":null,"locations":{"eastus":"b"}}`, nil},
+		{"v2 field name is case-insensitive", `{"version":2,"Locations":{"eastus":"a","eastus":"b"}}`, []string{"eastus"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// The scan must accept everything loadLocations accepts.
+			_, err := loadLocations([]byte(tc.doc))
+			require.NoError(t, err)
 
-	msgs, err := findDuplicateObjectKeys(raw, "location")
-	require.NoError(t, err)
-	require.Len(t, msgs, 1)
-	assert.Contains(t, msgs[0], `location "eastus"`)
+			pairs, err := locationPairs([]byte(tc.doc))
+			require.NoError(t, err)
+			msgs := duplicatePairs(pairs, "location")
+
+			require.Len(t, msgs, len(tc.dups))
+			for i, k := range tc.dups {
+				assert.Contains(t, msgs[i], `location "`+k+`"`)
+			}
+		})
+	}
 }
 
 // ── ProcessorClient integration ─────────────────────────────────────────────

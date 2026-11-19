@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // maxSupportedSchemaVersion is the highest schema version this provider understands.
@@ -99,26 +100,43 @@ func loadNamingSchemas(data []byte) ([]JsonNamingSchema, error) {
 	}
 }
 
-// locationsRaw returns the undecoded location map (v1: whole document, v2: "locations").
-func locationsRaw(data []byte) (json.RawMessage, error) {
+// locationPairs returns the location entries in the order encoding/json applies them,
+// so duplicate detection matches what loadLocations decodes.
+func locationPairs(data []byte) ([]keyValue, error) {
 	version, err := detectVersion(data)
 	if err != nil {
-		return nil, fmt.Errorf("locationsRaw: %w", err)
+		return nil, fmt.Errorf("locationPairs: %w", err)
 	}
 
 	switch version {
 	case 1:
-		return data, nil
+		return objectPairs(data)
 	case 2:
-		var envelope struct {
-			Locations json.RawMessage `json:"locations"`
+		fields, err := objectPairs(data)
+		if err != nil {
+			return nil, fmt.Errorf("locationPairs: v2: %w", err)
 		}
-		if err := json.Unmarshal(data, &envelope); err != nil {
-			return nil, fmt.Errorf("locationsRaw: v2: failed to unmarshal: %w", err)
+		var pairs []keyValue
+		for _, f := range fields {
+			// encoding/json matches field names case-insensitively.
+			if !strings.EqualFold(f.key, "locations") {
+				continue
+			}
+			v := bytes.TrimSpace(f.value)
+			switch {
+			case bytes.Equal(v, []byte("null")):
+				pairs = nil // null resets the map
+			case len(v) > 0 && v[0] == '{':
+				p, err := objectPairs(v)
+				if err != nil {
+					return nil, fmt.Errorf("locationPairs: v2: %w", err)
+				}
+				pairs = append(pairs, p...) // repeated objects merge into one map
+			}
 		}
-		return envelope.Locations, nil
+		return pairs, nil
 	default:
-		return nil, fmt.Errorf("locationsRaw: schema version %d is not supported", version)
+		return nil, fmt.Errorf("locationPairs: schema version %d is not supported", version)
 	}
 }
 

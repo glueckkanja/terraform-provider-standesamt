@@ -110,16 +110,12 @@ func processLocationsMapSchema(res *Result, unmar unmarshaler) error {
 	if err != nil {
 		return fmt.Errorf("processLocationsMapSchema: %w", err)
 	}
-	raw, err := locationsRaw(unmar.d)
-	if err != nil {
-		return fmt.Errorf("processLocationsMapSchema: %w", err)
-	}
-	dups, err := findDuplicateObjectKeys(raw, "location")
+	pairs, err := locationPairs(unmar.d)
 	if err != nil {
 		return fmt.Errorf("processLocationsMapSchema: %w", err)
 	}
 	res.Locations = lm
-	res.LocationDuplicates = prefixMessages(schemaLocationFileName, dups)
+	res.LocationDuplicates = prefixMessages(schemaLocationFileName, duplicatePairs(pairs, "location"))
 	return nil
 }
 

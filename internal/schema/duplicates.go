@@ -59,33 +59,47 @@ func findDuplicateResourceTypes(schemas []JsonNamingSchema) []string {
 	return messages
 }
 
-// findDuplicateObjectKeys reports repeated top-level keys, which encoding/json silently drops.
-func findDuplicateObjectKeys(raw []byte, label string) ([]string, error) {
+type keyValue struct {
+	key   string
+	value json.RawMessage
+}
+
+// objectPairs returns the top-level key/value pairs of a JSON object in file order.
+func objectPairs(raw []byte) ([]keyValue, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 
 	tok, err := dec.Token()
 	if err != nil {
-		return nil, fmt.Errorf("findDuplicateObjectKeys: %w", err)
+		return nil, fmt.Errorf("objectPairs: %w", err)
 	}
 	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return nil, fmt.Errorf("findDuplicateObjectKeys: expected a JSON object")
+		return nil, fmt.Errorf("objectPairs: expected a JSON object")
 	}
 
-	values := make(map[string][]string)
+	var pairs []keyValue
 	for dec.More() {
 		keyTok, err := dec.Token()
 		if err != nil {
-			return nil, fmt.Errorf("findDuplicateObjectKeys: %w", err)
+			return nil, fmt.Errorf("objectPairs: %w", err)
 		}
 		key, ok := keyTok.(string)
 		if !ok {
-			return nil, fmt.Errorf("findDuplicateObjectKeys: expected an object key, got %v", keyTok)
+			return nil, fmt.Errorf("objectPairs: expected an object key, got %v", keyTok)
 		}
 		var value json.RawMessage
 		if err := dec.Decode(&value); err != nil {
-			return nil, fmt.Errorf("findDuplicateObjectKeys: value of %q: %w", key, err)
+			return nil, fmt.Errorf("objectPairs: value of %q: %w", key, err)
 		}
-		values[key] = append(values[key], string(value))
+		pairs = append(pairs, keyValue{key: key, value: value})
+	}
+	return pairs, nil
+}
+
+// duplicatePairs reports keys that occur more than once, which encoding/json silently drops.
+func duplicatePairs(pairs []keyValue, label string) []string {
+	values := make(map[string][]string)
+	for _, p := range pairs {
+		values[p.key] = append(values[p.key], string(p.value))
 	}
 
 	keys := make([]string, 0)
@@ -95,7 +109,7 @@ func findDuplicateObjectKeys(raw []byte, label string) ([]string, error) {
 		}
 	}
 	if len(keys) == 0 {
-		return nil, nil
+		return nil
 	}
 	sort.Strings(keys)
 
@@ -107,5 +121,5 @@ func findDuplicateObjectKeys(raw []byte, label string) ([]string, error) {
 			label, k, len(v), strings.Join(v, ", "), v[len(v)-1],
 		))
 	}
-	return messages, nil
+	return messages
 }
