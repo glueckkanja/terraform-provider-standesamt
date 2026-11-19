@@ -95,6 +95,12 @@ requires a specific value (e.g. `"-"`). An explicit empty string and an omitted 
 semantically identical — both fall through to the provider-level separator. Omitting it keeps
 the file concise.
 
+~> **Note on duplicates:** Each `resourceType` must appear only once in `resources`. If a
+resource type is listed more than once, the provider uses the **last** entry and the
+`standesamt_config` data source reports a warning that names the duplicate entries and says
+whether they are identical or differ. Edits to an earlier entry have no effect until the
+duplicate is removed.
+
 ### `schema.locations.json`
 
 The flat location map is moved into a `locations` key inside the same envelope structure:
@@ -118,6 +124,10 @@ The flat location map is moved into a `locations` key inside the same envelope s
 | `version` | integer | yes | Schema format version. Must be `2` for v2 files. |
 | `generatedAt` | string | no | ISO-8601 timestamp of when the file was generated. Informational only. |
 | `locations` | object | yes | Map of Azure region names to their short abbreviations. |
+
+~> **Note on duplicates:** Each region name must appear only once in the location map. If a key
+is repeated, the last value is used and the `standesamt_locations` data source reports a warning
+listing all values found for that key.
 
 ## Version Detection
 

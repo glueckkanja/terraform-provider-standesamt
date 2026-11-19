@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // maxSupportedSchemaVersion is the highest schema version this provider understands.
@@ -96,6 +97,46 @@ func loadNamingSchemas(data []byte) ([]JsonNamingSchema, error) {
 			"loadNamingSchemas: schema version %d is not supported by this provider (max supported: %d); upgrade the provider",
 			version, maxSupportedSchemaVersion,
 		)
+	}
+}
+
+// locationPairs returns the location entries in the order encoding/json applies them,
+// so duplicate detection matches what loadLocations decodes.
+func locationPairs(data []byte) ([]keyValue, error) {
+	version, err := detectVersion(data)
+	if err != nil {
+		return nil, fmt.Errorf("locationPairs: %w", err)
+	}
+
+	switch version {
+	case 1:
+		return objectPairs(data)
+	case 2:
+		fields, err := objectPairs(data)
+		if err != nil {
+			return nil, fmt.Errorf("locationPairs: v2: %w", err)
+		}
+		var pairs []keyValue
+		for _, f := range fields {
+			// encoding/json matches field names case-insensitively.
+			if !strings.EqualFold(f.key, "locations") {
+				continue
+			}
+			v := bytes.TrimSpace(f.value)
+			switch {
+			case bytes.Equal(v, []byte("null")):
+				pairs = nil // null resets the map
+			case len(v) > 0 && v[0] == '{':
+				p, err := objectPairs(v)
+				if err != nil {
+					return nil, fmt.Errorf("locationPairs: v2: %w", err)
+				}
+				pairs = append(pairs, p...) // repeated objects merge into one map
+			}
+		}
+		return pairs, nil
+	default:
+		return nil, fmt.Errorf("locationPairs: schema version %d is not supported", version)
 	}
 }
 

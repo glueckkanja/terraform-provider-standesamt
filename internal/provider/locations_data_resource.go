@@ -81,6 +81,7 @@ func (d *LocationDataSource) Read(ctx context.Context, req datasource.ReadReques
 		resp.Diagnostics.AddError("source_reference", err.Error())
 		return
 	}
+	addDuplicateWarnings(&resp.Diagnostics, "Duplicate entry in locations schema library", result.LocationDuplicates)
 
 	locations := make(map[string]attr.Value)
 
