@@ -155,13 +155,23 @@ schema version 3 is not supported by this provider (max supported: 2); upgrade t
 
 ## Migrating from v1 to v2
 
-A helper script is provided in the schema library repository to automate the conversion:
+The helper script [`scripts/migrate-schema-v1-to-v2.sh`](https://github.com/glueckkanja/terraform-provider-standesamt/blob/main/scripts/migrate-schema-v1-to-v2.sh)
+lives in **this provider's repository** (not in the schema library repository) and automates the conversion.
+Run it from a checkout of this repository against your schema library directory:
 
 ```shell
-scripts/migrate-schema-v1-to-v2.sh azure/caf
+scripts/migrate-schema-v1-to-v2.sh path/to/your-library/azure/caf
 ```
 
-See [Migration Script](#migration-script) below for details.
+See [Migration Script](#migration-script) below for details, or follow the manual steps.
+
+-> **Migration is behaviour-neutral.** Wrapping a file in the v2 envelope leaves every entry untouched,
+so the provider generates exactly the same names as before, including for local additions and
+modified entries.
+
+~> **Wrap your own files; do not replace them.** If your copy of the library is customized, replacing it
+with the upstream v2 library instead of wrapping it silently changes generated names, and Terraform
+will replace the affected resources on the next apply.
 
 ### Manual migration steps
 
@@ -180,9 +190,8 @@ See [Migration Script](#migration-script) below for details.
 
 ## Migration Script
 
-The script `scripts/migrate-schema-v1-to-v2.sh` automates the conversion of both schema files
-in a given library path. It is a **placeholder** — see the script file for the full implementation
-plan and expected behaviour.
+The script `scripts/migrate-schema-v1-to-v2.sh` converts both schema files in a given library
+directory in place. It requires [jq](https://jqlang.org).
 
 ```shell
 # Usage
@@ -194,8 +203,16 @@ scripts/migrate-schema-v1-to-v2.sh azure/caf
 
 The script will:
 
-1. Read `<path>/schema.naming.json` and `<path>/schema.locations.json`
-2. Detect whether each file is already v2 (and skip if so)
+1. Read `<path>/schema.naming.json` and `<path>/schema.locations.json` (at least one must exist)
+2. Skip files that are already v2, and skip files with a newer version (v3+) with a warning
 3. Wrap v1 files in the v2 envelope, adding `"version": 2` and `"generatedAt"`
 4. Write the result back in-place (pretty-printed, 2-space indentation)
 5. Print a summary of what was changed
+
+A file that is not valid JSON, or whose payload has the wrong type, is reported as an error and
+left unchanged; the script then exits with a non-zero status. Running the script again on migrated
+files is safe and changes nothing.
+
+If `schema.locations.json` contains the same location key more than once, the migrated file keeps
+only the last value. That is the value the provider already uses, so names do not change, but the
+duplicate warning described above no longer appears.
